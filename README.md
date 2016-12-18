@@ -1,2 +1,2 @@
 # misc_bash
-Miscellaneous bash scripts.
+Miscellaneous Bash scripts.
