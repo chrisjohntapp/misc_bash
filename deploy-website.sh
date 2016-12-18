@@ -1,0 +1,82 @@
+BRANCHNAME=$1
+PWD=$(pwd)
+WORKDIR=/root/repos/newproj
+DBNAME=testdb
+DBDUMPFILE=dbdump.sql
+CURRENTBRANCH=$(git branch | grep '*' | awk '{print $2}')
+WEBSITE="testproj"
+
+confirm () {
+    read -r -p "${1:-Are you sure? [y/N]} " response
+    case $response in
+        [yY][eE][sS]|[yY])
+            true
+            ;;
+        *)
+            false
+            ;;
+    esac
+}
+
+warn () {
+    echo "The script failed at some point between making $WORKDIR mutable and making it immutable again. Please make directory tree immutable manually"
+}
+
+# Check sanity of inputs
+[[ $# -eq 1 ]] || { echo "Usage: $0 <branch_name>"; exit 1; }
+
+# Ensure correct working directory
+sleep 1 && [[ "${PWD}x" == "${WORKDIR}x" ]] || { echo "Changing directory to $WORKDIR"; cd $WORKDIR; }
+
+# Check repository is current
+sleep 1 && STATUS=$(git status)
+[[ $STATUS == *modified* ]] && { echo "Repository contents have changed since last deploy -- please commit or revert any changes then run this script again"; exit 2; }
+
+# Final sanity check
+confirm "You are about to deploy a new live version of ${WEBSITE}. Are you sure?" || { echo "Deploy cancelled"; exit 3; }
+
+# Make directory tree mutable
+sleep 1 && echo "Making $WORKDIR directory tree mutable"
+find $WORKDIR -print -exec chattr -i {} \; || { echo "Failed to make $WORKDIR dir tree mutable"; exit 4; }
+    echo "$WORKDIR directory tree is now mutable"
+
+# Perform git fetch
+sleep 1 && echo "Performing git fetch"
+git fetch origin || { echo "Git fetch failed"; warn; exit 5; }
+    echo "git fetch succeeded"                                                                                                          
+
+# Check if we're already on the new branch
+sleep 1 && echo "Checking if we need to checkout the git branch"
+if [[ "${BRANCHNAME}x" != "${CURRENTBRANCH}x" ]]
+then
+    sleep 1 && echo "We do. Now to checkout the new branch"
+    git checkout -b $BRANCHNAME || { echo "Git checkout failed"; warn; exit 6; }
+    echo "git checkout succeeded"
+else
+    sleep 1 && echo "Nope. Already on correct branch"
+fi
+
+# Git pull from gerrit
+sleep 1 && echo "Now to do the git pull"
+git pull origin $BRANCHNAME || { echo "Git pull failed"; warn; exit 7; }
+    echo "git pull succeeded"
+
+# Git commit - TODO - This may be required for subsequent iterations of same branch. Test and implement
+#sleep 1 && echo "Now to commit the changes"
+#git commit -a -m "$COMMITMESSAGE" || { echo "Git commit failed"; warn; exit 8; }
+#    echo "git commit succeeded"
+
+# Import database dump file to live database                                                                                            
+sleep 1 && echo "Now importing the database dump file"
+mysql -p $DBNAME < $DBDUMPFILE || { echo "Database import failed"; warn; exit 9; }
+    echo "Database import succeeded"                                                     
+
+# Make wordpress directory tree immutable
+sleep 1 && echo "Making $WORKDIR directory tree immutable"  
+find $WORKDIR -print -exec chattr +i {} \; || { echo "Failed to make $WORKDIR dir tree immutable"; exit 10; }
+    echo "$WORKDIR directory tree is now immutable"
+
+# Celebrate the news                                                                                                                    
+sleep 2 && echo "Deploy complete -- check ${WEBSITE}. If there are any problems roll back using 'git checkout <previous_branch>'" 
+
+exit 0
