@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# deploy-example_co_uk.sh -- <chrisjohntapp@gmail.com>
+# deploy-example_co_uk.sh
 
 #===== SITE SPECIFIC VARS ================================================================
 WORKDIR=/var/www/vhosts/example_co_uk/

@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# btrfs-scrubber.sh -- <chrisjohntapp@gmail.com>
+# btrfs-scrubber.sh
 # Scrubs all subvolumes listed in 'subvols' array, checks them
 # for errors, and sends email alert if errors are found.
 
 subvols=( '/home/' )
-recipient=chrisjohntapp@gmail.com
+recipient=<my email address>
 
 btrfs=$(which btrfs)
 

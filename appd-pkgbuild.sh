@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# appd-pkgbuild -- <chrisjohntapp@gmail.com>
+# appd-pkgbuild
 
 # Packages AppDynamics agent archives into .deb packages.
 # Currently tar and zip archive types are supported.
@@ -49,7 +49,7 @@ get_input()
 
   read -rep "What is the package version number? (include epoch and release number. eg. '4.1.3.2-1'): " version
   read -rep "What architecture are you building for? (use 'dpkg-architecture -L' for a list of available names): " -i 'amd64' arch
-  read -rep 'Who are you?: ' -i 'Christopher J Tapp <chrisjohntapp@gmail.com>' whoyou
+  read -rep 'Who are you?: ' -i 'me myemail@address' whoyou
 }
 
 unpack_archive()

@@ -2,7 +2,6 @@
 
 # btrfs-snapshot.sh
 # Snapshots subvolumes listed in 'subvols' array, and deletes old snapshots.
-# <chrisjohntapp@gmail.com>
 
 subvols=( '/home/' )
 die_days=14

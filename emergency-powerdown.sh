@@ -7,7 +7,7 @@
 ## filesystems, shuts down all vms, and shuts down the host.  ##
 ################################################################
 
-# emergency-powerdown.sh -- <chrisjohntapp@gmail.com>
+# emergency-powerdown.sh
 
 # Set critical threshold here (in mWh's)
 CRITICAL=15000

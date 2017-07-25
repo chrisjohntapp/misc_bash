@@ -1,0 +1,129 @@
+#!/bin/bash
+# Configuration script for <hostname>
+# ThinkPad T420i
+# PU_IAS Linux 6.1
+
+# Install powersave script
+echo '#!/bin/bash
+# script to make power saving tweaks when not on ac power.
+
+if [ $(grep -c on-line /proc/acpi/ac_adapter/AC/state) == "1" ] ; then
+# ac power mode
+	echo 0 > /proc/sys/vm/laptop_mode
+	echo 1 > /proc/sys/kernel/nmi_watchdog
+	for i in /sys/class/scsi_host/host*/link_power_management_policy ; do
+		echo max_performance > $i ;
+	done
+	for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor ; do
+		echo performance > $i
+	done
+	echo500 > /proc/sys/vm/dirty_writeback_centisecs
+	echo 0 > /sys/devices/system/cpu/sched_mc_power_savings
+else
+# battery mode
+	echo 5 > /proc/sys/vm/laptop_mode
+	echo 0 > /proc/sys/kernel/nmi_watchdog
+	for i in /sys/class/scsi_host/host*xinput set-int-prop 12 "Evdev Wheel Emulation" 8 1
+xinput set-int-prop 12 "Evdev Wheel Emulation Button" 8 2
+xinput set-int-prop 12 "Evdev Wheel Emulation Axes" 8 6 7 4 5
+/link_power_management_policy ; do
+		echo min_power > $i ;
+	done
+	for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor ; do
+		echo ondemand > $i
+	done
+	echo 1500 > /proc/sys/vm/dirty_writeback_centisecs
+	echo 1 > /sys/devices/system/cpu/sched_mc_power_savings
+
+fi
+' > /etc/pm/power.d/powersave.sh
+chmod +x /etc/pm/power.d/powersave.sh
+
+## Setup ntpd
+if [ !-f $(type ntpd) ] ; then
+    yum install ntp -y
+        wait
+fi
+
+chkconfig ntpd on
+ntpdate pool.ntp.org
+service ntpd start
+
+
+# Edits to ~/.bashrc
+echo "# User specific aliases and functions
+
+function backup(){
+    mv \$1 \$1.bak
+    cp \$1.bak \$1
+    echo \"\$1 backed up\"
+
+}
+
+alias pine='alpine'
+" >> /home/<my home>/.bashrc
+
+## Change Mailto's
+# /etc/anacrontab
+# /etc/crontab
+# /etc/logwatch/conf/logwatch.conf
+
+
+# install xinput stuff
+yum install xorg-x11-apps sysfsutils -y
+wait
+
+# create autostart script and populate it
+touch /home/<my home>/bin/startup.sh
+echo '#!/bin/bash
+xinput set-int-prop "TPPS/2 IBM TrackPoint" "Evdev Wheel Emulation" 8 1
+xinput set-int-prop "TPPS/2 IBM TrackPoint" "Evdev Wheel Emulation Button" 8 2
+xinput set-int-prop 12 "Evdev Wheel Emulation Axes" 8 6 7 4 5
+synclient TapButton1=1
+synclient TapButton2=2
+synclient HorizTwoFingerScroll=1
+synclient VertTwoFingerScroll=1
+synclient EmulateTwoFingerMinW=8
+synclient EmulateTwoFingerMinZ=40
+
+sleep 120 && ~/.dropbox-dist/dropboxd
+' > /home/<my home>/bin/startup.sh
+chmod +x /home/<my home>/bin/startup.sh
+
+echo 'Exec=/home/<my home>/bin/startup.sh' > /home/<my home>/.config/autostart/startup.desktop
+
+# misc stuff
+echo '# Trackpoint stuff
+echo -n 1 > /sys/devices/platform/i8042/serio1/serio2/press_to_select
+' >> /etc/rc.local
+
+find /home/<my home>/ -type d -exec chmod -R g+s {} \;
+
+## Allow user <me> to change cpufreq using gnome widgets
+echo '[org.gnome.cpufreqselector]
+Identity=unix-user:<me>
+Action=org.gnome.cpufreqselector
+ResultAny=no
+ResultInactive=no
+ResultActive=yes
+' >> /var/lib/polkit-1/localauthority/50-local.d/org.gnome.cpufreqselector.pkla
+xinput set-int-prop 12 "Evdev Wheel Emulation" 8 1
+xinput set-int-prop 12 "Evdev Wheel Emulation Button" 8 2
+xinput set-int-prop 12 "Evdev Wheel Emulation Axes" 8 6 7 4 5
+
+# Set laptop mode in rc.local
+echo 'echo 5 > /proc/sys/vm/laptop_mode' >> /etc/rc.local
+
+# Change filesystem fsck to once per 50 mounts
+mount > /tmp/mounts
+ROOTFS=$(grep "on / " /tmp/mounts | cut -d " " -f 1)
+/sbin/tune2fs -c 50 $ROOTFS
+
+##### Stuff I can't script #####
+in gconf-editor change desktop/gnome/peripherals/touchpad/scroll_method to "2".
+
+
+
+
+
+

@@ -18,7 +18,7 @@ do
 
 	STATUS=$(git status -s)
 	
-	[[ ! -z "${STATUS}" ]] && echo "Git checksum failed on ${i}" #| mailx -s "Git checksum failed on ${i}" chrisjohntapp@gmail.com
+	[[ ! -z "${STATUS}" ]] && echo "Git checksum failed on ${i}" #| mailx -s "Git checksum failed on ${i}" me@email.com
 done
 
 exit 0

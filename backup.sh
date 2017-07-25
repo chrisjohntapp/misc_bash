@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# backup.sh -- <chrisjohntapp@gmail.com>
+# backup.sh
 
 if [ $# -lt 1 ]; then 
     echo "No destination defined. Usage: $0 destination" >&2

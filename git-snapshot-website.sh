@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# git-snapshot-example_co.sh -- <chrisjohntapp@gmail.com>
+# git-snapshot-example_co.sh
 # To be run from cron
 
 #==================================================================================================

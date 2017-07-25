@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# freedns-updater.sh -- <chrisjohntapp@gmail.com>
+# freedns-updater.sh
 # Retrieves current real IP and updates freedns, if required.
 
 [ -s /tmp/freedns ] || echo "undef" > /tmp/freedns

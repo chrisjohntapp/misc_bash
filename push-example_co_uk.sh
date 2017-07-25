@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# push-example.co.uk.sh -- <chrisjohntapp@gmail.com>
+# push-example.co.uk.sh
 
 ## SITE SPECIFIC VARS ####################################################
 SUBDOMAIN="wwwstage"

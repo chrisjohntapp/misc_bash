@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# rotate-scans.sh -- <chrisjohntapp@gmail.com>
+# rotate-scans.sh
 
 WORK_DIR=/home/public/scans
 RETIRE_AGE=40320       # minutes

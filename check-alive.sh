@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# check-alive.sh -- <chrisjohntapp@gmail.com>
+# check-alive.sh
 #
 # Pings a host and reports if it's down. Typically run from cron.
 #
