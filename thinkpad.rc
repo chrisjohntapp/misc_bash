@@ -1,7 +1,5 @@
 #!/bin/bash
-# Configuration script for <hostname>
-# ThinkPad T420i
-# PU_IAS Linux 6.1
+# Configure script: PU_IAS Linux 6.1 on Thinkpad.
 
 # Install powersave script
 echo '#!/bin/bash

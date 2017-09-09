@@ -1,5 +1,5 @@
 #!/bin/bash
-# Fedora 15 on Asus
+# Configure script: Fedora 15 on Asus.
 
 # check script is being run interactively
 case $- in 
