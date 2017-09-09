@@ -47,9 +47,9 @@ check_resolv()
   fi
 }
 
-validate_output()
+validate_output_type()
 {
-  if [[ ! $output =~ ^(screen|email|log)$ ]]; then
+  if [[ ! $output_type =~ ^(screen|email|log)$ ]]; then
     usage
     exit 1
   fi
@@ -66,7 +66,7 @@ run_test()
 process_results()
 {
   if [[ ! $(echo ${results[@]} | grep 0) ]]; then
-    case "${output}" in
+    case "${output_type}" in
       'screen') screen_out; log_out ;;
        'email') email_out; log_out ;;
          'log') log_out ;;
@@ -74,7 +74,9 @@ process_results()
   fi
 }
 
-################ RUN ################
+#==========
+# Main
+#==========
 
 if [[ $# -lt 6 ]] || [[ $1 == '--help' ]]; then
   usage
@@ -85,7 +87,7 @@ while getopts t:p:o:r:h opt; do
   case "$opt" in
     t) host="$OPTARG" ;;
     p) num_pings="$OPTARG" ;;
-    o) output="$OPTARG" ;;
+    o) output_type="$OPTARG" ;;
     r) email_recip="$OPTARG" ;;
     h) usage
        exit 1 ;;
@@ -95,7 +97,7 @@ done
 logfile=/var/log/check-alive.log
 
 check_resolv
-validate_output
+validate_output_type
 run_test
 process_results
 

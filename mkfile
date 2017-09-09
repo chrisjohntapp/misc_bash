@@ -42,10 +42,7 @@ do
   esac
 done
 
-# This rather nifty thing removes all the arguments dealt with by getopts,
-# leaving the remaining arguments in positions $1 $2 etc. So in this case it
-# removes all the i, b, q, h options and leaves size in $1 and filename in $2.
-# OPTIND contains the index of the next argument to be processed.
+# Remove all processed options from the argument list.
 for i in $(seq 2 ${OPTIND})
 do
   shift
