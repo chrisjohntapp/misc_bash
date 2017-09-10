@@ -1,15 +1,12 @@
 #!/bin/bash
 
-# rotate-scans.sh
+work_dir=/home/public/scans
+retire_age=40320       # minutes
+die_age=80640
 
-WORK_DIR=/home/public/scans
-RETIRE_AGE=40320       # minutes
-DIE_AGE=80640
+trash_dir=/${work_dir}/.Trash
 
-TRASH_DIR=/${WORK_DIR}/.Trash
+find ${work_dir} -maxdepth 1 -type f -mmin +${retire_age} -print0 | xargs -0 -r mv --target-directory=${trash_dir}
 
-find ${WORK_DIR} -maxdepth 1 -type f -mmin +${RETIRE_AGE} -print0 | xargs -0 -r mv --target-directory=${TRASH_DIR}
+find ${trash_dir} -maxdepth 1 -type f -mmin +${die_age} -print0 | xargs -0 -r unlink
 
-find ${TRASH_DIR} -maxdepth 1 -type f -mmin +${DIE_AGE} -print0 | xargs -0 -r unlink
-
-exit $?
