@@ -1,4 +1,4 @@
-lib_remove-file-endstrings=1
+_lib_remove_file_endstrings=1
 
 remove_file_endstrings()
 {
@@ -26,6 +26,8 @@ remove_file_endstrings()
   fi
 
   find $target_dir -type f -name "*${endstring}" -print0 | while read -d $'\0' file; do mv "$file" "${file%${endstring}}"; done
+
+  unset target_dir endstring file
 }
 
 # vi:syntax=sh

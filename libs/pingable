@@ -10,10 +10,12 @@ check_pingable()
   num_pings=3
   OPTIND=1
 
-  while getopts 'p:' opt; do
+  while getopts 'p:a:' opt; do
     case "$opt" in
       p) num_pings="$OPTARG" ;;
-      *) printf "Usage: check_alive [ -p <number of pings> ] fqdn\n  (-p The number of pings to use (default is 3)).\n"
+      a) alt_dns="$OPTARG" ;;
+      *) printf "\nUsage: check_alive [ -p <number of pings> ] [ -a ip address] fqdn\n
+(-p The number of pings to use (default is 3)).\n(-a An alternate DNS server for dig test)\n\n"
          return 1 ;;
     esac
   done
@@ -31,7 +33,12 @@ check_pingable()
   fi
  
   # Check if fqdn is resolvable.
-  if [ -z "$(dig $fqdn a +short)" ]; then
+  if [ -n "$alt_dns" ]; then
+    insert="@${alt_dns} "
+  else
+    insert=""
+  fi
+  if [ -z "$(dig ${insert}${fqdn} a +short)" ]; then
     printf "Cannot resolve that fqdn.\n"
     return 1
   fi
@@ -47,6 +54,9 @@ check_pingable()
     printf "$fqdn is not pingable.\n"
     return 1
   fi
+
+  # Clear vars
+  unset num_pings alt_dns results insert fqdn
 }
 
 # vi:syntax=sh
