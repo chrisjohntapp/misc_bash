@@ -1,4 +1,4 @@
-_lib_search_repo=1
+_lib_apt=1
 
 search_repo()
 {
