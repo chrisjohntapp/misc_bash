@@ -1,0 +1,12 @@
+[ -z "$_definitions" ] && . ./definitions
+
+# Solaris-specific getipaddr() definition
+getipaddr()
+{
+  uname | grep SunOS > /dev/null || return $_WRONG_PLATFORM
+  [ -f /etc/hostname.${1} ] || return $_NO_CONFIG
+  [ ! -s /etc/hostname.$1 ] && return $_NO_IP
+  getent hosts `head -1 /etc/hostname.${1} | cut -d"/" -f1 | \
+      awk '{ print $1 }'` | cut -f1 || cat /etc/hostname.${1}
+  return $SUCCESS
+}

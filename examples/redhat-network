@@ -1,0 +1,21 @@
+[ -z "$_definitions" ] && . ./definitions
+
+# RedHat-specific getipaddr() definition
+getipaddr()
+{
+  [ -d /etc/sysconfig/network-scripts ] || return _$WRONG_PLATFORM
+  if [ -f /etc/sysconfig/network-scripts/ifcfg-$1 ]; then
+    unset IPADDR
+    . /etc/sysconfig/network-scripts/ifcfg-$1
+    if [ -z “$IPADDR” ]; then
+      return $_NO_IP
+    else
+      echo $IPADDR
+    fi
+  else
+    return $_NO_CONFIG
+  fi
+
+  # Not strictly needed
+  return $SUCCESS
+}
