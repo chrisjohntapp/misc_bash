@@ -1,6 +1,27 @@
 #!/bin/bash
 # Configure script: PU_IAS Linux 6.1 on Thinkpad.
 
+# check script is being run interactively
+case $- in 
+    *i*) : ;;
+    *) echo "error: script must be run interactively" ; exit 1 ;;
+esac
+
+# set username variable
+printf "%s" "Please enter your username: "
+read USERNAME
+
+# add user to group 'wheel' (if not already present)
+STRING1=$(cat /etc/group | grep 'wheel')
+case "$STRING1" in
+    *$USERNAME*) echo "$USERNAME is already in group \"wheel\"" ;;
+    *) sed 's/wheel.*$/&,$USERNAME/' /etc/group ;;
+esac
+
+# install rpmfusion repos
+yum localinstall --nogpgcheck http://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-stable.noarch.rpm http://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-stable.noarch.rpm -y
+wait
+
 # Install powersave script
 echo '#!/bin/bash
 # script to make power saving tweaks when not on ac power.
@@ -15,7 +36,7 @@ if [ $(grep -c on-line /proc/acpi/ac_adapter/AC/state) == "1" ] ; then
 	for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor ; do
 		echo performance > $i
 	done
-	echo500 > /proc/sys/vm/dirty_writeback_centisecs
+	echo 1500 > /proc/sys/vm/dirty_writeback_centisecs
 	echo 0 > /sys/devices/system/cpu/sched_mc_power_savings
 else
 # battery mode
@@ -32,6 +53,32 @@ xinput set-int-prop 12 "Evdev Wheel Emulation Axes" 8 6 7 4 5
 	done
 	echo 1500 > /proc/sys/vm/dirty_writeback_centisecs
 	echo 1 > /sys/devices/system/cpu/sched_mc_power_savings
+        echo '' > '/sys/module/snd_hda_intel/parameters/power_save'
+        echo 'min_power' > '/sys/class/scsi_host/host0/link_power_management_policy'
+        echo 'min_power' > '/sys/class/scsi_host/host5/link_power_management_policy'
+        echo 'min_power' > '/sys/class/scsi_host/host3/link_power_management_policy'
+        echo 'min_power' > '/sys/class/scsi_host/host1/link_power_management_policy'
+        echo 'min_power' > '/sys/class/scsi_host/host2/link_power_management_policy'
+        echo 'min_power' > '/sys/class/scsi_host/host4/link_power_management_policy'
+        echo 'min_power' > '/sys/class/scsi_host/host1/link_power_management_policy'
+	echo 'auto' > '/sys/bus/i2c/devices/i2c-4/device/power/control'
+	echo 'auto' > '/sys/bus/usb/devices/1-1.4/power/control'
+	echo 'auto' > '/sys/bus/pci/devices/0000:03:00.0/power/control'
+	echo 'auto' > '/sys/bus/pci/devices/0000:00:1c.3/power/control'
+	echo 'auto' > '/sys/bus/pci/devices/0000:00:00.0/power/control'
+	echo 'auto' > '/sys/bus/pci/devices/0000:00:1c.1/power/control'
+	echo 'auto' > '/sys/bus/pci/devices/0000:0d:00.3/power/control'
+	echo 'auto' > '/sys/bus/pci/devices/0000:00:1d.0/power/control'
+	echo 'auto' > '/sys/bus/pci/devices/0000:00:1a.0/power/control'
+	echo 'auto' > '/sys/bus/pci/devices/0000:00:1f.2/power/control'
+	echo 'auto' > '/sys/bus/pci/devices/0000:00:1c.0/power/control'
+	echo 'auto' > '/sys/bus/pci/devices/0000:00:1f.0/power/control'
+	echo 'auto' > '/sys/bus/pci/devices/0000:0d:00.0/power/control'
+	echo 'auto' > '/sys/bus/pci/devices/0000:00:16.0/power/control'
+	echo 'auto' > '/sys/bus/pci/devices/0000:00:1b.0/power/control'
+	echo 'auto' > '/sys/bus/pci/devices/0000:00:19.0/power/control'
+	echo 'auto' > '/sys/bus/pci/devices/0000:00:1c.4/power/control'
+	ethtool -s enp0s25 wol d
 
 fi
 ' > /etc/pm/power.d/powersave.sh
@@ -50,15 +97,13 @@ service ntpd start
 
 # Edits to ~/.bashrc
 echo "# User specific aliases and functions
+source ~/.bash-git-prompt/gitprompt.sh
 
-function backup(){
-    mv \$1 \$1.bak
-    cp \$1.bak \$1
-    echo \"\$1 backed up\"
+for i in ~/Repos/laputa/misc_bash/libs/*; do
+  . $i
+done
 
-}
-
-alias pine='alpine'
+set -o vi
 " >> /home/<my home>/.bashrc
 
 ## Change Mailto's
@@ -117,8 +162,12 @@ mount > /tmp/mounts
 ROOTFS=$(grep "on / " /tmp/mounts | cut -d " " -f 1)
 /sbin/tune2fs -c 50 $ROOTFS
 
+# PowerTop recommendations.
+
 ##### Stuff I can't script #####
-in gconf-editor change desktop/gnome/peripherals/touchpad/scroll_method to "2".
+# in gconf-editor change desktop/gnome/peripherals/touchpad/scroll_method to "2".
+
+#EOF
 
 
 
