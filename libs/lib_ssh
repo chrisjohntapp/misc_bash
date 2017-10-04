@@ -5,14 +5,12 @@ sshloop()
   # SSH to every host listed in <file> without checking host key, and
   # issue <command> on it.
 
-  if [ $# -ne 2 ]; then
-    printf "Usage: sshloop <file> <command>\n"
+  if [ $# -ne 3 ]; then
+    printf "Usage: sshloop <file> <command> <sleep(secs)>\n"
     return 1
   fi
 
   file=$1
-  command=$2
-
   if ! [ -r $file ]; then
     printf "File is not readable.\n"
     return 1
@@ -20,12 +18,24 @@ sshloop()
 
   readarray hosts < $file
 
+  command=$2
+  # Some sanity check here?
+
+  sleep=$3
+  if ! [[ $sleep =~ ^-?[0-9]+$ ]]; then
+    printf "Sleep must be an integer.\n"
+    return 1
+  fi
+
   for i in ${hosts[@]}; do
     ssh -o StrictHostKeyChecking=no $i $command
-    if ! [ $? = 0 ]; then
-      printf "Failed while attempting to run \"$command\" on ${i}.\nExiting \
-for safety.\n"
-      return 1
-    fi
+
+#    if ! [ $? = 0 ]; then
+#      printf "Failed while attempting to run \"$command\" on ${i}.\nExiting \
+#for safety.\n"
+#      return 1
+#    fi
+
+    sleep $sleep
   done
 }
