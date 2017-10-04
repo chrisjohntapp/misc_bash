@@ -1,0 +1,31 @@
+_lib_ssh=1
+
+sshloop()
+{
+  # SSH to every host listed in <file> without checking host key, and
+  # issue <command> on it.
+
+  if [ $# -ne 2 ]; then
+    printf "Usage: sshloop <file> <command>\n"
+    return 1
+  fi
+
+  file=$1
+  command=$2
+
+  if ! [ -r $file ]; then
+    printf "File is not readable.\n"
+    return 1
+  fi
+
+  readarray hosts < $file
+
+  for i in ${hosts[@]}; do
+    ssh -o StrictHostKeyChecking=no $i $command
+    if ! [ $? = 0 ]; then
+      printf "Failed while attempting to run \"$command\" on ${i}.\nExiting \
+for safety.\n"
+      return 1
+    fi
+  done
+}

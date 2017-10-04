@@ -9,11 +9,11 @@ remove_file_endstrings()
     case $argv in
       d) target_dir=$OPTARG ;;
       h) printf "Usage: remove_file_endstrings [ -d <work directory> ] <string to remove>\n" ;;
-    esac 
+    esac
   done
 
   : ${target_dir:=$PWD}
-  
+
   for i in $(seq 2 $OPTIND); do
     shift
   done
@@ -35,9 +35,9 @@ taketip()
   tips_path='Dropbox/CLI_tips'
   if [ $# -gt 1 ]; then
     f=$1; shift
-    printf "$*" "\n" >> ${HOME}/${tips_path}/${f}.txt
+    printf "$*" >> ${HOME}/${tips_path}/${f}.txt
   elif [ $# -eq 1 ]; then
-    cat ${HOME}/${tips_path}/${1}.txt 
+    cat ${HOME}/${tips_path}/${1}.txt
   else
     printf "Usage: taketip [ type ] [ Notes to add to file ]\n"
   fi
