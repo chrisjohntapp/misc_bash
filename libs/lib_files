@@ -30,5 +30,33 @@ remove_file_endstrings()
   unset target_dir endstring file
 }
 
+taketip()
+{
+  tips_path='Dropbox/CLI_tips'
+  if [ $# -gt 1 ]; then
+    f=$1; shift
+    printf "$*" "\n" >> ${HOME}/${tips_path}/${f}.txt
+  elif [ $# -eq 1 ]; then
+    cat ${HOME}/${tips_path}/${1}.txt 
+  else
+    printf "Usage: taketip [ type ] [ Notes to add to file ]\n"
+  fi
+}
+
+edittip()
+{
+  tips_path='Dropbox/CLI_tips'
+  if [ $# -eq 1 ]; then
+    filename=${HOME}/${tips_path}/${1}.txt
+    if [ -w $filename ]; then
+      vim $filename
+    else
+      printf "File does not exist.\n"
+    fi
+  else
+    printf "Usage: edittip filename\n"
+  fi
+}
+
 # vi:syntax=sh
 # EOF
