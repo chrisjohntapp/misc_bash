@@ -5,6 +5,10 @@ sshloop()
   # SSH to every host listed in <file> without checking host key, and
   # issue <command> on it.
 
+  printf "\n!!! This command does very little sanity checking. Are you sure
+you want to do this? Ctrl+C will cancel. You have 8 seconds.. !!!\n\n"
+  sleep 8
+ 
   if [ $# -ne 3 ]; then
     printf "Usage: sshloop <file> <command> <sleep(secs)>\n"
     return 1
