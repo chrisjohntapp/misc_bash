@@ -1,3 +1,4 @@
+#!/bin/bash
 _lib_git=1
 
 pull-all()
@@ -6,4 +7,3 @@ pull-all()
 }
 
 # vi:syntax=sh
-# EOF

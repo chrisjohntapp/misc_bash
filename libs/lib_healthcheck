@@ -1,3 +1,4 @@
+#!/bin/bash
 _lib_healthcheck=1
 
 check_pingable()
@@ -62,4 +63,3 @@ check_pingable()
 }
 
 # vi:syntax=sh
-# EOF

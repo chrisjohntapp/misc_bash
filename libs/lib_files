@@ -1,3 +1,4 @@
+#!/bin/bash
 _lib_files=1
 
 remove_file_endstrings()
@@ -59,4 +60,3 @@ edittip()
 }
 
 # vi:syntax=sh
-# EOF
