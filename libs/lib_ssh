@@ -8,13 +8,13 @@ sshloop()
   printf "\n!!! This command does very little sanity checking. Are you sure
 you want to do this? Ctrl+C will cancel. You have 8 seconds.. !!!\n\n"
   sleep 8
- 
+
   if [ $# -ne 3 ]; then
     printf "Usage: sshloop <file> <command> <sleep(secs)>\n"
     return 1
   fi
 
-  file=$1
+  local file=$1
   if ! [ -r $file ]; then
     printf "File is not readable.\n"
     return 1
@@ -22,16 +22,16 @@ you want to do this? Ctrl+C will cancel. You have 8 seconds.. !!!\n\n"
 
   readarray hosts < $file
 
-  command=$2
+  local command=$2
   # Some sanity check here?
 
-  sleep=$3
+  local sleep=$3
   if ! [[ $sleep =~ ^-?[0-9]+$ ]]; then
     printf "Sleep must be an integer.\n"
     return 1
   fi
 
-  for i in ${hosts[@]}; do
+  for i in "${hosts[@]}"; do
     ssh -o StrictHostKeyChecking=no $i $command
 
 #    if ! [ $? = 0 ]; then

@@ -10,4 +10,8 @@ scripts:
   past:
     Scripts from the past. Probably crappy and of only historical interest.
   current:
-    Scripts that might be of use currently. May use ../libs/*.
+    Scripts that might be of use currently. May use ../libs/\*.
+
+Stuff to do:
+  Apply these standards across the board:
+    https:\/\/google.github.io\/styleguide\/shell.xml

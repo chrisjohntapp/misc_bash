@@ -14,7 +14,7 @@ remove_file_endstrings()
 
   : ${target_dir:=$PWD}
 
-  for i in $(seq 2 $OPTIND); do
+  for _ in $(seq 2 $OPTIND); do
     shift
   done
 
@@ -32,7 +32,7 @@ remove_file_endstrings()
 
 taketip()
 {
-  tips_path='Dropbox/CLI_tips'
+  local tips_path='Dropbox/CLI_tips'
   if [ $# -gt 1 ]; then
     f=$1; shift
     printf "$*" >> ${HOME}/${tips_path}/${f}.txt
@@ -45,9 +45,9 @@ taketip()
 
 edittip()
 {
-  tips_path='Dropbox/CLI_tips'
+  local tips_path='Dropbox/CLI_tips'
   if [ $# -eq 1 ]; then
-    filename=${HOME}/${tips_path}/${1}.txt
+    local filename=${HOME}/${tips_path}/${1}.txt
     if [ -w $filename ]; then
       vim $filename
     else

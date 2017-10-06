@@ -1,71 +1,52 @@
 #!/bin/bash
 
-# check-alive.sh
-#
-# Pings a host and reports if it's down. Typically run from cron.
-#
-# You can allow for occasional missed pings by adjusting the number
-# of pings to use in the test (using the -p flag). Only if all
-# pings fail will the host be classed as down. 
-#
-# Output (the -o flag) can be to the console ('screen'), the
-# logfile ('log'), or to an email recipient ('email' [also sends
-# to the log file]).
+# Customisable way to report if a host is pingable.
 
 set -e
 
-screen_out()
-{
+screen_out() {
   echo "$host looks down"
 }
 
-log_out()
-{
+log_out() {
   echo "$(date '+%b %d %T') $host looks down" >> $logfile
 }
 
-email_out()
-{
-  echo "$host looks down" | mailx -s "$host looks down" $email_recip 
+email_out() {
+  echo "$host looks down" | mailx -s "$host looks down" $email_recip
 }
 
-usage()
-{
+usage() {
   echo "Usage: $(basename $0) -t <target host> -p <number of pings> -o <output type> [-r <email recipient>]
   -t Target (a FQDN)
-  -p The number of pings to use in the test (an integer)
-  -o Output type ('screen', 'email', or 'log')
+  -p The number of pings to use in the test. Only if all pings fail will host be classes as unreachable.
+  -o Output type ('screen', 'email' (which also sends to log), or 'log')
   -r Email recipient (an email address)
   -h Help (this message)"
 }
 
-check_resolv()
-{
+check_resolv() {
   if [[ -z "$(dig $host a +short)" ]]; then
     echo "Cannot resolve that hostname. Using a FQDN is recommended."
     exit 2
   fi
 }
 
-validate_output_type()
-{
+validate_output_type() {
   if [[ ! $output_type =~ ^(screen|email|log)$ ]]; then
-    usage
-    exit 1
+    usage; exit 1
   fi
 }
 
-run_test()
-{
+run_test() {
   for i in $(seq $num_pings); do
     results[$i]=$(ping -c 1 $host >/dev/null; echo $?)
     sleep 1
   done
 }
 
-process_results()
-{
-  if [[ ! $(echo ${results[@]} | grep 0) ]]; then
+process_results() {
+  if [[ ! $(echo "${results[@]}" | grep 0) ]]; then
     case "${output_type}" in
       'screen') screen_out; log_out ;;
        'email') email_out; log_out ;;
@@ -75,12 +56,11 @@ process_results()
 }
 
 #==========
-# Main
+# Main.
 #==========
 
 if [[ $# -lt 6 ]] || [[ $1 == '--help' ]]; then
-  usage
-  exit 1
+  usage; exit 1
 fi
 
 while getopts t:p:o:r:h opt; do
@@ -89,8 +69,7 @@ while getopts t:p:o:r:h opt; do
     p) num_pings="$OPTARG" ;;
     o) output_type="$OPTARG" ;;
     r) email_recip="$OPTARG" ;;
-    h) usage
-       exit 1 ;;
+    h) usage ; exit 1 ;;
   esac
 done
 
@@ -102,4 +81,3 @@ run_test
 process_results
 
 # EOF
-
