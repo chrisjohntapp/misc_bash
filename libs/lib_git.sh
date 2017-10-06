@@ -1,7 +1,6 @@
 #!/bin/bash
 
 _lib_git=1
-printf "%s %s\n" "$(basename ${BASH_SOURCE[0]})" $_lib_git
 
 pull-all()
 {

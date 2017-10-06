@@ -1,7 +1,6 @@
 #!/bin/bash
 
 _lib_healthcheck=1
-printf "%s %s\n" "$(basename ${BASH_SOURCE[0]})" $_lib_healthcheck
 
 check_pingable()
 {
@@ -25,7 +24,7 @@ check_pingable()
   done
 
   # Remove any processed options from argv.
-  for i in $(seq 2 $OPTIND); do
+  for _ in $(seq 2 $OPTIND); do
     shift
   done
 

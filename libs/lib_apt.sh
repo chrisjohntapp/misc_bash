@@ -1,7 +1,7 @@
 #!/bin/bash
 
 _lib_apt=1
-printf "%s %s\n" "$(basename ${BASH_SOURCE[0]})" $_lib_apt
+# printf "%s %s\n" "$(basename ${BASH_SOURCE[0]})" $_lib_apt
 
 search_repo()
 {
