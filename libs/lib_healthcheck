@@ -1,5 +1,5 @@
 #!/bin/bash
-_lib_healthcheck=1; printf "%s %s" $0 $_lib_healthcheck
+_lib_healthcheck=1; printf "%s %s\n" $(basename $BASH_SOURCE) $_lib_healthcheck
 
 check_pingable()
 {
