@@ -30,19 +30,19 @@ check_pingable()
 
   # Assign remaining argument to variable.
   local fqdn=$1
-  if [ -z "$fqdn" ]; then
+  if [[ -z "$fqdn" ]]; then
     printf "No fqdn supplied.\n"
     return 1
   fi
 
   # Check if fqdn is resolvable.
   local insert
-  if [ -n "$alt_dns" ]; then
+  if [[ -n "$alt_dns" ]]; then
     insert="@${alt_dns} "
   else
     insert=""
   fi
-  if [ -z "$(dig ${insert}${fqdn} a +short)" ]; then
+  if [[ -z "$(dig ${insert}${fqdn} a +short)" ]]; then
     printf "Cannot resolve that fqdn.\n"
     return 1
   fi

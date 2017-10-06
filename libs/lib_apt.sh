@@ -7,17 +7,17 @@ search_repo()
 {
   . /etc/os-release
 
-  if [ ! $# = 1 ]; then
+  if [[ ! $# = 1 ]]; then
     printf "Usage: $(basename $0) <repo name substring>.\n"
     return 1
   fi
 
-  if [ "$ID_LIKE" != "debian" ]; then
+  if [[ "$ID_LIKE" != "debian" ]]; then
     printf "$(basename $0) is for dpkg systems only.\n"
     return 1
   fi
 
-  if [ ! -r /var/lib/apt/lists ]; then
+  if [[ ! -r /var/lib/apt/lists ]]; then
     printf "Could not read the package lists file.\n"
     return 1
   fi

@@ -4,8 +4,7 @@ _lib_files=1
 
 remove_file_endstrings()
 {
-  # Removes a string from the end of all filenames in a given directory. Probably
-  # most suitable for removing file extensions.
+  # Removes a string from the end of all filenames in a given directory.
 
   while getopts 'd:' argv; do
     case $argv in
@@ -20,7 +19,7 @@ remove_file_endstrings()
     shift
   done
 
-  if [ -z "$1" ]; then
+  if [[ -z "$1" ]]; then
     printf "No string supplied."
     return 1
   else
@@ -35,10 +34,10 @@ remove_file_endstrings()
 taketip()
 {
   local tips_path='Dropbox/CLI_tips'
-  if [ $# -gt 1 ]; then
+  if [[ $# -gt 1 ]]; then
     f=$1; shift
     printf "$*" >> ${HOME}/${tips_path}/${f}.txt
-  elif [ $# -eq 1 ]; then
+  elif [[ $# -eq 1 ]]; then
     cat ${HOME}/${tips_path}/${1}.txt
   else
     printf "Usage: taketip [ type ] [ Notes to add to file ]\n"
@@ -48,9 +47,9 @@ taketip()
 edittip()
 {
   local tips_path='Dropbox/CLI_tips'
-  if [ $# -eq 1 ]; then
+  if [[ $# -eq 1 ]]; then
     local filename=${HOME}/${tips_path}/${1}.txt
-    if [ -w $filename ]; then
+    if [[ -w $filename ]]; then
       vim $filename
     else
       printf "File does not exist.\n"

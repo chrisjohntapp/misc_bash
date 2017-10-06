@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_lib_ssh=1
+_lib_ssh=1;
 
 sshloop()
 {
@@ -11,13 +11,13 @@ sshloop()
 you want to do this? Ctrl+C will cancel. You have 8 seconds.. !!!\n\n"
   sleep 8
 
-  if [ $# -ne 3 ]; then
+  if [[ $# -ne 3 ]]; then
     printf "Usage: sshloop <file> <command> <sleep(secs)>\n"
     return 1
   fi
 
   local file=$1
-  if ! [ -r $file ]; then
+  if ! [[ -r $file ]]; then
     printf "File is not readable.\n"
     return 1
   fi
@@ -36,7 +36,7 @@ you want to do this? Ctrl+C will cancel. You have 8 seconds.. !!!\n\n"
   for i in "${hosts[@]}"; do
     ssh -o StrictHostKeyChecking=no $i $command
 
-#    if ! [ $? = 0 ]; then
+#    if ! [[ $? = 0 ]]; then
 #      printf "Failed while attempting to run \"$command\" on ${i}.\nExiting \
 #for safety.\n"
 #      return 1
