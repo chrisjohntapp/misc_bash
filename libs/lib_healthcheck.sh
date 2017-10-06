@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# shellcheck disable=SC2034
 _lib_healthcheck=1
 
 check_pingable()

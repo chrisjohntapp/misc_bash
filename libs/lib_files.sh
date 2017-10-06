@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# shellcheck disable=SC2034
 _lib_files=1
 
 remove_file_endstrings()
