@@ -7,6 +7,16 @@
 _LIB_GIT=1
 
 function pull_all() {
+  ##############################################################################
+  # cd's to each directory one level beneath the current working directory, and
+  # if it is a git repo, issues 'git pull', and cd's back up a level.
+  # Globals:
+  #   None
+  # Arguments:
+  #   None
+  # Returns:
+  #   None
+  ##############################################################################
   local repo
   while IFS= read -r -d '' repo; do
 
