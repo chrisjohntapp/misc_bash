@@ -15,3 +15,6 @@ scripts:
 Stuff to do:
   Apply these standards across the board:
     https:\/\/google.github.io\/styleguide\/shell.xml
+
+set constants as read-only, and make them all-caps
+Remove pipes to while

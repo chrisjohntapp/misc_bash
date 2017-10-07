@@ -20,7 +20,7 @@ BRANCHNAME=$1
 confirm () {
     read -r -p "${1:-Are you sure? [y/N]} " response
     case $response in
-        [yY][eE][sS]|[yY]) 
+        [yY][eE][sS]|[yY])
             true
             ;;
         *)
@@ -70,10 +70,10 @@ then
     git checkout -b ${BRANCHNAME} || { echo "Git checkout failed"; warn; exit 7; }
 else
     sleep 1 && echo "Nope. Already on correct branch"
-fi                                        
+fi
 
 # Git pull
-git pull origin ${BRANCHNAME} || { echo "Git pull failed"; warn; exit 8; } 
+git pull origin ${BRANCHNAME} || { echo "Git pull failed"; warn; exit 8; }
 
 #===== DATABASE STUFF ===================================================================
 # Take backup of the current database
@@ -90,7 +90,7 @@ mysql -u ${DBUSER} -p${DBPASS} ${DBNAME} < ${DBDUMPFILE} || { echo "Database imp
 
 #===== FINISH UP ========================================================================
 # Make wordpress directory tree immutable
-sleep 1 && echo "Making ${WORKDIR}/wordpress directory tree immutable"  
+sleep 1 && echo "Making ${WORKDIR}/wordpress directory tree immutable"
 
 find ${WORKDIR}/wordpress -path ${WORKDIR}/wordpress/wp-content/uploads -prune -o -print -exec chattr +i {} \; || { echo "Failed to make ${WORKDIR}/wordpress dir tree immutable"; exit 11; }
 
@@ -101,7 +101,7 @@ sleep 1 && echo "Changing file ownership of any new files"
 
 chown -R ${APACHE_USER}.${APACHE_USER} ${WORKDIR}/wordpress
 
-# Celebrate the news                                                                              
+# Celebrate the news
 sleep 2 && echo "Deploy complete -- check ${WEBSITE}. If there are any problems roll back using 'git checkout <previous_branch>' and restore the database from /tmp/${DBNAME}-${DATE}.gz"
-                                                                                                                                        
+
 exit 0

@@ -1,50 +1,64 @@
 #!/bin/bash
-
+#
+# SSH utility functions.
+#
+# vi:syntax=sh
 # shellcheck disable=SC2034
-_lib_ssh=1;
+_LIB_SSH=1;
 
-sshloop()
-{
-  # SSH to every host listed in <file> without checking host key, and
-  # issue <command> on it.
+function ssh_loop() {
+  ##############################################################################
+  # SSH to every host listed in <file> without checking host key, and issue
+  # <command> on it.
+  # Globals:
+  #   None
+  # Arguments:
+  #   file (filename, which should contain a list of fqdns)
+  #   command (command to issue on each host)
+  #   sleep (how long to wait before moving from one host to the next)
+  # Returns:
+  #   None
+  ##############################################################################
 
-  printf "\n!!! This command does very little sanity checking. Are you sure
-you want to do this? Ctrl+C will cancel. You have 8 seconds.. !!!\n\n"
-  sleep 8
+  printf "\nBeware; this command does very little sanity checking.\n"
+  local response
+  read -r -p "Are you sure you want to proceed? [y/N]} " response
+  case "${response}" in
+    [yY][eE][sS]|[yY]) : ;;
+                    *) { printf "Operation cancelled.\n"; return 1; } ;;
+  esac
 
   if [[ $# -ne 3 ]]; then
     printf "Usage: sshloop <file> <command> <sleep(secs)>\n"
     return 1
   fi
 
-  local file=$1
-  if ! [[ -r $file ]]; then
+  local -r FILE=$1
+  if ! [[ -r "${FILE}" ]]; then
     printf "File is not readable.\n"
     return 1
   fi
 
-  readarray hosts < $file
+  readarray hosts < "${FILE}"
 
   local command=$2
-  # Some sanity check here?
+  # TODO: Insert some sanity check here?
 
   local sleep=$3
-  if ! [[ $sleep =~ ^-?[0-9]+$ ]]; then
+  if ! [[ ${sleep} =~ ^-?[0-9]+$ ]]; then
     printf "Sleep must be an integer.\n"
     return 1
   fi
 
   for i in "${hosts[@]}"; do
-    ssh -o StrictHostKeyChecking=no $i $command
+    ssh -o StrictHostKeyChecking=no "${i}" "${command}"
 
-#    if ! [[ $? = 0 ]]; then
-#      printf "Failed while attempting to run \"$command\" on ${i}.\nExiting \
+#    if [[ $? != 0 ]]; then
+#      printf "Failed while attempting to run \"${command}\" on ${i}.\nExiting \
 #for safety.\n"
 #      return 1
 #    fi
 
-    sleep $sleep
+    sleep ${sleep}
   done
 }
-
-# vi:syntax=sh
