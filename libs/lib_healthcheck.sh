@@ -12,17 +12,6 @@ function pingable() {
   # You can allow for occasional dropped packets by adjusting the number of
   # pings to use in the test (using the -p flag). Only if all pings fail will
   # the FQDN be classed as down.
-  # Globals:
-  #   None
-  # Arguments:
-  #   (optional) -p <number of pings>
-  #   (optional) -a <ip address> (of alternative nameserver)
-  #   (required) FQDN (the target of the test)
-  # Returns:
-  #   Code 0 if FQDN responds to at least one ping.
-  #   Code 1 if logical error.
-  #   Code 2 if FQDN can't be resolved.
-  #   Code 3 if FQDN does not respond to any pings.
   ##############################################################################
 
   OPTIND=1

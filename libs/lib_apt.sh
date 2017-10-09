@@ -9,12 +9,6 @@ _LIB_APT=1
 function search_repo() {
   ##############################################################################
   # Print all packages contained within one or more configured repositories.
-  # Globals:
-  #   None
-  # Arguments:
-  #   REPOSTRING (a string which will be a substring of at least one repo name)
-  # Returns:
-  #   None
   ##############################################################################
 
   if [[ $# != 1 ]]; then

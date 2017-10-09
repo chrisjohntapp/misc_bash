@@ -10,12 +10,6 @@ function pull_all() {
   ##############################################################################
   # cd's to each directory one level beneath the current working directory, and
   # if it is a git repo, issues 'git pull', and cd's back up a level.
-  # Globals:
-  #   None
-  # Arguments:
-  #   None
-  # Returns:
-  #   None
   ##############################################################################
   local repo
   while IFS= read -r -d '' repo; do
@@ -31,5 +25,5 @@ function pull_all() {
       cd ..
     fi
 
-  done < <(find "${PWD}" -mindepth -maxdepth 1 -type d -print0)
+  done < <(find "${PWD}" -mindepth 1 -maxdepth 1 -type d -print0)
 }

@@ -9,13 +9,6 @@ _LIB_FILES=1
 function remove_file_end_strings() {
   ##############################################################################
   # Removes a string from the end of all filenames in a given directory.
-  # Globals:
-  #   None
-  # Arguments:
-  #   (optional) directory (The directory in which to operate. Defaults to $CWD)
-  #   (required) string (The string to be removed from all files)
-  # Returns:
-  #   None
   ##############################################################################
 
   while getopts 'd:' argv; do
@@ -49,16 +42,6 @@ function tip() {
   # Allows quick writing of cli notes/tips to a specific file within the tips
   # library. Alternatively prints the whole named file to stdout for reading.
   # TODO: make cat function (no args) use a pager
-  # Globals:
-  #   None
-  # Arguments:
-  #   (required) type (technology name, also the name of the file to be
-  #     written/read).
-  #   (optional) Any additional text, which will be written to file.
-  # Returns:
-  #   If invoked with more than one argument, returns nothing.
-  #   If invoked with only one argument, returns the content of the file with
-  #     the same name as the first argument.
   ##############################################################################
   local -r TIPS_PATH='Dropbox/CLI_tips'
   if [[ $# -gt 1 ]]; then
@@ -74,12 +57,6 @@ function tip() {
 function edit_tip() {
   ##############################################################################
   # Opens the named file within the tips library for editing.
-  # Globals:
-  #   None
-  # Arguments:
-  #   filename (the name of the tip file to be edited)
-  # Returns:
-  #   A vim session editing the named file.
   ##############################################################################
   local -r TIPS_PATH='Dropbox/CLI_tips'
   if [[ $# -eq 1 ]]; then

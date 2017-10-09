@@ -10,14 +10,6 @@ function ssh_loop() {
   ##############################################################################
   # SSH to every host listed in <file> without checking host key, and issue
   # <command> on it.
-  # Globals:
-  #   None
-  # Arguments:
-  #   file (filename, which should contain a list of fqdns)
-  #   command (command to issue on each host)
-  #   sleep (how long to wait before moving from one host to the next)
-  # Returns:
-  #   None
   ##############################################################################
 
   printf "\nBeware; this command does very little sanity checking.\n"
