@@ -10,7 +10,6 @@ function remove_file_end_strings() {
   ##############################################################################
   # Removes a string from the end of all filenames in a given directory.
   ##############################################################################
-
   while getopts 'd:' argv; do
     case "${argv}" in
       d) local target_dir="${OPTARG}" ;;

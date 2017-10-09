@@ -13,7 +13,6 @@ function pingable() {
   # pings to use in the test (using the -p flag). Only if all pings fail will
   # the FQDN be classed as down.
   ##############################################################################
-
   OPTIND=1
   local num_pings=3
 
@@ -31,37 +30,33 @@ for dig test)\n\n"
     esac
   done
 
-  # Remove any options from argv.
   for _ in $(seq 2 "${OPTIND}"); do
     shift
   done
-  # .. and assign remaining argument to FQDN.
+
   local -r FQDN=$1
   if [[ -z "${FQDN}" ]]; then
     printf "No FQDN supplied.\n"
     return 1
   fi
 
-  # Use custom resolver if specified.
   local insert
   if [[ -n "${ALT_DNS}" ]]; then
     insert="@${ALT_DNS} "
   else
     insert=""
   fi
-  # ..and check if resolvable.
+
   if [[ -z "$(dig "${insert}""${FQDN}" a +short)" ]]; then
     printf "Cannot resolve that FQDN.\n"
     return 2
   fi
 
-  # Ping the target FQDN.
   for i in $(seq ${num_pings}); do
     results[$i]="$(ping -c 1 "${FQDN}" >'/dev/null'; printf "$?\n")"
     sleep 1
   done
 
-  # If there are no successful pings, check failed.
   if ! [[ "$(printf "%s" "${results[@]}" | grep 0)" ]]; then
     printf "${FQDN} is not pingable.\n"
     return 3

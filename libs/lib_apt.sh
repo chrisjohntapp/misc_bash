@@ -10,7 +10,6 @@ function search_repo() {
   ##############################################################################
   # Print all packages contained within one or more configured repositories.
   ##############################################################################
-
   if [[ $# != 1 ]]; then
     printf "%s %s %s\n" "Usage:" "$(basename "${FUNCNAME[0]}")" "'repo name glob'"
     return 1

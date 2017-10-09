@@ -11,7 +11,6 @@ function ssh_loop() {
   # SSH to every host listed in <file> without checking host key, and issue
   # <command> on it.
   ##############################################################################
-
   printf "\nBeware; this command does very little sanity checking.\n"
   local response
   read -r -p "Are you sure you want to proceed? [y/N]} " response
