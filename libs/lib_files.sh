@@ -46,11 +46,22 @@ function tip() {
     f=$1; shift
     printf "$*" >> "${HOME}/${TIPS_PATH}/${f}.txt"
   elif [[ $# -eq 1 ]]; then
-    cat "${HOME}/${TIPS_PATH}/${1}.txt" | less -F
+    f=$1; shift
+    if [[ "${f}" = '-l' ]]; then
+      ls -1 "${HOME}/${TIPS_PATH}" | less -F
+    else
+      local -r TIP_FILE="${HOME}/${TIPS_PATH}/${1}.txt"
+      if [[ -r "${TIP_FILE}" ]]; then
+        cat "${TIP_FILE}" | less -F
+      else
+        printf "%s%s\n" "Cannot find tip file: " "${TIP_FILE}"
+      fi
+    fi
   else
-    printf "Usage: tip type [ Notes to add to file ]\n"
+    printf "Usage: tip [ -l ] | [ type ] [ Notes to add to file ]\n"
   fi
 }
+
 
 function edit_tip() {
   ##############################################################################
