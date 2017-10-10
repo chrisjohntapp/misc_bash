@@ -40,14 +40,13 @@ function tip() {
   ##############################################################################
   # Allows quick writing of cli notes/tips to a specific file within the tips
   # library. Alternatively prints the whole named file to stdout for reading.
-  # TODO: make cat function (no args) use a pager
   ##############################################################################
   local -r TIPS_PATH='Dropbox/CLI_tips'
   if [[ $# -gt 1 ]]; then
     f=$1; shift
     printf "$*" >> "${HOME}/${TIPS_PATH}/${f}.txt"
   elif [[ $# -eq 1 ]]; then
-    cat "${HOME}/${TIPS_PATH}/${1}.txt"
+    cat "${HOME}/${TIPS_PATH}/${1}.txt" | less -F
   else
     printf "Usage: tip type [ Notes to add to file ]\n"
   fi
