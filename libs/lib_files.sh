@@ -14,7 +14,10 @@ function remove_file_end_strings() {
   while getopts 'd:h' argv; do
     case "${argv}" in
       d) local target_dir="${OPTARG}" ;;
-      h) printf "Usage: remove_file_end_strings [ -d <work directory> ] <string to remove>\n" ;;
+      h)
+        printf "Usage: remove_file_end_strings [ -d <work directory> ] <string to remove>\n"
+        return 1
+        ;;
     esac
   done
 
