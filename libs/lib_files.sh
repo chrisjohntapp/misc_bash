@@ -7,14 +7,14 @@
 _LIB_FILES=1
 
 function remove_file_end_strings() {
-  ##############################################################################
+  #=====================================================================
   # Removes a string from the end of all filenames in a given directory.
-  ##############################################################################
-  while getopts 'd:' argv; do
+  #=====================================================================
+  OPTIND=1
+  while getopts 'd:h' argv; do
     case "${argv}" in
       d) local target_dir="${OPTARG}" ;;
-      h) printf "Usage: remove_file_end_strings [ -d <work directory> ] <string \
-to remove>\n" ;;
+      h) printf "Usage: remove_file_end_strings [ -d <work directory> ] <string to remove>\n" ;;
     esac
   done
 
@@ -37,17 +37,17 @@ to remove>\n" ;;
 }
 
 function tip() {
-  ##############################################################################
+  #==========================================================================
   # Allows quick writing of cli notes/tips to a specific file within the tips
-  # library. Alternatively prints the whole named file to stdout for reading.
-  ##############################################################################
+  # library. Alternatively prints the whole named file to stdout for reading,
+  # or lists the contents of the tips library.
+  #==========================================================================
   local -r TIPS_PATH='Dropbox/CLI_tips'
-  if [[ $# -gt 1 ]]; then
+  if [[ $# -gt 1 ]] && [[ -r "${HOME}/${TIPS_PATH}/${1}.txt" ]]; then
     f=$1; shift
     printf "$*" >> "${HOME}/${TIPS_PATH}/${f}.txt"
   elif [[ $# -eq 1 ]]; then
-    f=$1; shift
-    if [[ "${f}" = '-l' ]]; then
+    if [[ "${1}" = '-l' ]]; then
       ls -1 "${HOME}/${TIPS_PATH}" | less -F
     else
       local -r TIP_FILE="${HOME}/${TIPS_PATH}/${1}.txt"
@@ -62,11 +62,10 @@ function tip() {
   fi
 }
 
-
 function edit_tip() {
-  ##############################################################################
+  #==========================================================
   # Opens the named file within the tips library for editing.
-  ##############################################################################
+  #==========================================================
   local -r TIPS_PATH='Dropbox/CLI_tips'
   if [[ $# -eq 1 ]]; then
     local filename="${HOME}/${TIPS_PATH}/${1}.txt"

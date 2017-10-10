@@ -20,7 +20,7 @@ function pingable() {
     case "${opt}" in
       p) num_pings="${OPTARG}" ;;
       a) local -r ALT_DNS="${OPTARG}" ;;
-    h|*)
+      *)
         printf "\nUsage: check_alive [ -p <number of pings> ] \
 [ -a ip address] FQDN\n
 (-p The number of pings to use (default is 3)).\n(-a An alternate DNS server \

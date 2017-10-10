@@ -18,3 +18,4 @@ Stuff to do:
 
 set constants as read-only, and make them all-caps
 Remove pipes to while
+Remove getopts from functions
