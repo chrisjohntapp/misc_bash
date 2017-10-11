@@ -1,0 +1,10 @@
+#!/bin/bash
+#
+# Clears all cert signing requests for nodes named 'ip-172-26-*' or similar.
+
+for i in $(/usr/bin/sudo /usr/bin/puppet cert list | /usr/bin/awk '{print $1}' | tr -d '"+\ '); do
+  regex='ip-[[:digit:]]{3}-.*'
+  if [[ "${i}" =~ ${regex} ]]; then
+    /usr/bin/sudo /usr/bin/puppet ca destroy "${i}"
+  fi
+done
