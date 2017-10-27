@@ -48,7 +48,7 @@ function tip() {
   local -r TIPS_PATH='Dropbox/CLI_tips'
   if [[ $# -gt 1 ]] && [[ -r "${HOME}/${TIPS_PATH}/${1}.txt" ]]; then
     f=$1; shift
-    printf "$*" >> "${HOME}/${TIPS_PATH}/${f}.txt"
+    printf "%s\n" "$*" >> "${HOME}/${TIPS_PATH}/${f}.txt"
   elif [[ $# -eq 1 ]]; then
     if [[ "${1}" = '-l' ]]; then
       ls -1 "${HOME}/${TIPS_PATH}" | less -F
@@ -78,6 +78,6 @@ function edit_tip() {
       printf "File does not exist.\n"
     fi
   else
-    printf "Usage: edittip filename\n"
+    printf "Usage: edit_tip <techname>\n"
   fi
 }
