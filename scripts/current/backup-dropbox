@@ -1,27 +1,28 @@
 #!/bin/bash
 
-. /home/me/lib/lib_pingable
+. $HOME/Repos/laputa/misc_bash/libs/lib_healthcheck.sh
+
+custom_port=XX
+user=foobar
+backup_server=foobar
 
 # Capturing a string value in addition to the return code can be useful;
 # in this case it contains error messages.
-result=$(check_pingable hostname.domain)
+result=$(pingable ${backup_server})
 
 if [ $? = 0 ] && [ -z "$result" ]; then
-  start=$(date +%s)
-  rsync --delete -e 'ssh -p <port number>' -aAX /home/me/Dropbox me@hostname:/backups/funnel
+  # Copy Dropbox dir to backup server.
+  rsync --delete -e "ssh -p ${custom_port}" -a /home/<me>/Dropbox ${user}@${backup_server}:/backups/funnel
 
   # If rsync was successful, update timestamp on remote copy.
   if [ $? = 0 ]; then
-    ssh -p <port number> me@hostname touch /backups/funnel/Dropbox
-    finish=$(date +%s)
-    printf "total backup time: $(( ($FINISH-$START) / 60 )) minutes, $(( ($FINISH-$START) % 60 )) seconds\n"
+    ssh -p ${custom_port} ${user}@${backup_server} touch /backups/funnel/Dropbox
   else
     printf "Something went wrong with the backup.\n"
     exit 1
   fi
 else
-  printf "check_pingable returned an error: $result.\n"
+  printf "pingable returned an error: $result.\n"
   exit 1
 fi
 
-# EOF
