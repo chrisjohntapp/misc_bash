@@ -5,27 +5,40 @@
 images_dir=/var/lib/libvirt/images
 backup_dir=/backups/libvirt
 
-all_guest_fullpaths=$(sudo find "${images_dir}" -maxdepth 1 -mindepth 1 -type f)
+##
+
+all_guest_fullpaths=()
+while IFS= read -r -d $'\0'; do
+  all_guest_fullpaths+=("$REPLY")
+done < <(sudo find "${images_dir}" -maxdepth 1 -mindepth 1 -type f -print0)
+
+printf "\nThe following guests will be backed up: \n\n"
+printf "%s\n" "$(sudo find ${images_dir} -maxdepth 1 -mindepth 1 -type f -printf '%f\n')"
+
 active_guests=$(sudo virsh list | sed '1,2d;$d')
 
 if [[ -n "$active_guests" ]]; then
-  echo 'Some guests are still running. All guests must be stopped to run this script.'
+  printf "\nSome guests are still running. All guests must be stopped to run this script.\n"
   exit 0
+else
+  printf "\nNo guests found running. Jolly good. We shall continue.\n"
 fi
 
 for fullpath in "${all_guest_fullpaths[@]}"; do
   guest=$(basename "${fullpath//.qcow2}")
+  printf "\nBacking up ${guest}...\n"
 
   if [[ ! -d "${backup_dir}/${guest}" ]] || [[ ! -w "${backup_dir}/${guest}" ]]; then
     mkdir "${backup_dir}/${guest}"
   fi
 
   sudo virsh dumpxml "${guest}" > "${backup_dir}/${guest}/${guest}.xml" || \
-    { echo "sudo virsh dumpxml ${guest} failed."; exit 1; }
+    { printf "sudo virsh dumpxml ${guest} failed.\n"; exit 1; }
 
-  sudo cp "${fullpath}" "${backup_dir}/${guest}/${guest}.qcow2" || \
-    { echo "sudo cp ${fullpath} failed."; exit 1; }
+  rsync -a "${fullpath}" "${backup_dir}/${guest}/${guest}" || \
+    { printf "sudo rsync ${fullpath} failed.\n"; exit 1; }
 
 done
 
+printf "\nDone\n\n"
 printf "%s\n" "$(ls -l ${backup_dir}/* )"
