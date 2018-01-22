@@ -11,7 +11,7 @@ function search_repo() {
   # Print all packages contained within one or more configured repositories.
   ##############################################################################
   if [[ $# != 1 ]]; then
-    printf "%s %s %s\n" "Usage:" "$(basename "${FUNCNAME[0]}")" "'repo name glob'"
+    printf "%s %s %s\n" "Usage:" "$(basename "${FUNCNAME[0]}")" "'<repo name glob>'"
     return 1
   fi
 
@@ -25,8 +25,10 @@ function search_repo() {
     printf "Could not find the package lists directory.\n"
     return 1
   fi
+
   cd '/var/lib/apt/lists' || return 1
 
   local -r REPO_STRING=$1
-  cat "*${REPO_STRING}*" | grep '^Package: ' | sed 's/^Package: //' | sort -u
+  cat *${REPO_STRING}* | grep '^Package: ' | sed 's/^Package: //' | sort -u
 }
+
