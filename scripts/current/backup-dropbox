@@ -3,8 +3,9 @@
 . $HOME/Repos/laputa/misc_bash/libs/lib_healthcheck.sh
 
 custom_port=XX
-user=foobar
-backup_server=foobar
+local_user=foo
+remote_user=bar
+backup_server=baz
 
 # Capturing a string value in addition to the return code can be useful;
 # in this case it contains error messages.
@@ -12,11 +13,11 @@ result=$(pingable ${backup_server})
 
 if [ $? = 0 ] && [ -z "$result" ]; then
   # Copy Dropbox dir to backup server.
-  rsync --delete -e "ssh -p ${custom_port}" -a /home/<me>/Dropbox ${user}@${backup_server}:/backups/funnel
+  rsync --delete -e "ssh -p ${custom_port}" -a /home/${local_user}/Dropbox ${remote_user}@${backup_server}:/backups/funnel
 
   # If rsync was successful, update timestamp on remote copy.
   if [ $? = 0 ]; then
-    ssh -p ${custom_port} ${user}@${backup_server} touch /backups/funnel/Dropbox
+    ssh -p ${custom_port} ${remote_user}@${backup_server} touch /backups/funnel/Dropbox
   else
     printf "Something went wrong with the backup.\n"
     exit 1
