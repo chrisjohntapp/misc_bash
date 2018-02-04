@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# Moves the mouse/cursor around to stop a screensaver kicking in.
+
+xrange=${1:-1350}
+yrange=${2:-750}
+
+while (true); do
+  x=$RANDOM
+  y=$RANDOM
+
+  let "x %= ${xrange}"
+  let "y %= ${yrange}"
+
+  sleep 4 && xdotool mousemove $x $y 
+done
