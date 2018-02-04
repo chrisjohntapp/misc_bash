@@ -8,9 +8,9 @@ backup_dir=/backups/libvirt
 ##
 
 all_guest_fullpaths=()
-while IFS= read -r -d $'\0'; do
-  all_guest_fullpaths+=("$REPLY")
-done < <(sudo find "${images_dir}" -maxdepth 1 -mindepth 1 -type f -print0)
+while read -r -d ''; do # Preferable to "-d $'\0'".  Could also use IFS= and do away with '-d' altogether.
+  all_guest_fullpaths+=("$REPLY") # Quotes around $REPLY means no fiddling with IFS.
+done < <(sudo find "${images_dir}" -maxdepth 1 -mindepth 1 -type f -print0) # Print results null-separated.
 
 printf "\nThe following guests will be backed up: \n\n"
 printf "%s\n" "$(sudo find ${images_dir} -maxdepth 1 -mindepth 1 -type f -printf '%f\n')"
