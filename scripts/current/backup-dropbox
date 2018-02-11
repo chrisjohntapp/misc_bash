@@ -7,8 +7,8 @@ local_user=foo
 remote_user=bar
 backup_server=baz
 
-# Capturing a string value in addition to the return code can be useful;
-# in this case it contains error messages.
+# Capturing the output -- with '$(command)' -- in addition to the return code --with a bare 'commmand' --  can be useful.
+# In this case it contains an error message or an empty string.
 result=$(pingable ${backup_server})
 
 if [ $? = 0 ] && [ -z "$result" ]; then

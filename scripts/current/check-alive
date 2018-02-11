@@ -2,8 +2,6 @@
 
 # Customisable way to report if a host is pingable.
 
-set -e
-
 screen_out() {
   echo "$host looks down"
 }

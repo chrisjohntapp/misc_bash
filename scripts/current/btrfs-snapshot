@@ -10,7 +10,7 @@ die_date=$(date "+%d-%m-%Y" -d "${die_days} days ago")
 
 
 btrfs="$(which btrfs)" || \
-{ echo "error: could not find btrfs binary" >> /var/log/btrfs/snapshot.log; exit 1; }
+{ echo "Error: could not find btrfs binary" >> /var/log/btrfs/snapshot.log; exit 1; }
 
 function take_snapshots()
 {
