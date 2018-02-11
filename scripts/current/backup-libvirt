@@ -2,8 +2,6 @@
 
 # Back up all libvirt qemu / qcow2 guests.
 
-# TODO: Need to merge these all/selected functions.
-
 images_dir=/var/lib/libvirt/images
 backup_dir=/backups/libvirt
 
@@ -24,7 +22,7 @@ check_selected_active() {
   active_guests=$(sudo virsh list | sed '1,2d;$d' | awk '{print $2}')
 
   for s in "$@"; do
-    if [[ "$active_guests" =~ "$s" ]]; then
+    if [[ "$active_guests" =~ $s ]]; then
       printf "\nOne or more selected guests are still running. They must be stopped to be backed up.\n"
       exit 0
     else
@@ -37,20 +35,20 @@ backup_all() {
   printf "\nThe following guests will be backed up: \n\n"
   all_guest_fullpaths=()
   while read -r -d ''; do
-    all_guest_fullpaths+=("$REPLY")
-    printf "${REPLY}\n"
+    all_guest_fullpaths+=("${REPLY}")
+    printf "%s\n" "${REPLY}"
   done < <(sudo find "${images_dir}" -maxdepth 1 -mindepth 1 -type f -print0)
 
   for fullpath in "${all_guest_fullpaths[@]}"; do
     guest=$(basename "${fullpath//.qcow2}")
-    printf "\nBacking up ${guest}...\n"
+    printf "\nBacking up %s...\n" "${guest}"
 
     if [[ ! -d "${backup_dir}/${guest}" ]] || [[ ! -w "${backup_dir}/${guest}" ]]; then
       mkdir "${backup_dir}/${guest}"
     fi
 
     sudo virsh dumpxml "${guest}" > "${backup_dir}/${guest}/${guest}.xml" || \
-      { printf "sudo virsh dumpxml ${guest} failed.\n"; exit 1; }
+      { printf "sudo virsh dumpxml %s failed.\n" "${guest}"; exit 1; }
 
     sudo rsync -a "${fullpath}" "${backup_dir}/${guest}/${guest}" || \
       { printf "rsync failed.\n"; exit 1; }
@@ -60,14 +58,14 @@ backup_all() {
 
 backup_selected() {
   for guest in "$@"; do
-    printf "\nBacking up ${guest}..\n"
+    printf "\nBacking up %s..\n" "${guest}"
 
     if [[ ! -d "${backup_dir}/${guest}" ]] || [[ ! -w "${backup_dir}/${guest}" ]]; then
       mkdir "${backup_dir}/${guest}"
     fi
 
     sudo virsh dumpxml "${guest}" > "${backup_dir}/${guest}/${guest}.xml" || \
-      { printf "sudo virsh dumpxml ${guest} failed.\n"; exit 1; }
+      { printf "sudo virsh dumpxml %s failed.\n" "${guest}"; exit 1; }
 
     sudo rsync -a "/var/lib/libvirt/images/${guest}.qcow2" "${backup_dir}/${guest}/${guest}" || \
       { printf "rsync failed.\n"; exit 1; }
