@@ -1,0 +1,43 @@
+#!/bin/bash
+
+# Backup a directory in user's $HOME dir to a backup server.
+# e.g. for Dropbox or similar.
+
+# Optional overrides.
+custom_port=
+custom_local_user=
+custom_remote_user=
+
+source_dir="$1"
+backup_server="$2"
+script=$(basename "$0")
+local_user=${custom_local_user:-$(id -un)}
+remote_user=${custom_remote_user:-$(id -un)}
+port=${custom_port:-22}
+
+usage() {
+  { printf "Usage: %s <directory in \$HOME dir> to back up> <backup server>\n" "${script}"; exit 0; }
+}
+
+[[ $# = 2 ]] || usage
+
+lib_healthcheck=$(find "${HOME}" -type f -name lib_healthcheck.sh 2>/dev/null)
+if [[ -n "${lib_healthcheck}" ]]; then
+  . "${lib_healthcheck}"
+else
+  usage
+fi
+
+# Capturing the output -- with '$(command)' -- in addition to the return code --with a bare 'commmand' --  can be useful.
+ping_result=$(pingable ${backup_server})
+if [[ $? = 0 ]] && [[ -z "${ping_result}" ]]; then
+  rsync_result=$(rsync --delete -e "ssh -p ${port}" -a /home/${local_user}/"${source_dir}" ${remote_user}@${backup_server}:/backups/funnel)
+  if [[ $? = 0 ]]; then
+    ssh -p ${port} ${remote_user}@${backup_server} touch /backups/funnel/"${source_dir}"
+  else
+    { printf "Error: %s.\n" "${rsync_result}"; exit 1; }
+  fi
+else
+  { printf "Error: %s.\n" "${ping_result}"; exit 1; }
+fi
+
