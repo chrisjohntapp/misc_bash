@@ -81,3 +81,12 @@ function edit_tip() {
     printf "Usage: edit_tip <techname>\n"
   fi
 }
+
+function bakup() {
+  #========================================================
+  # Create copies of files with standard naming convention.
+  #========================================================
+  if [[ -f "$1" ]]; then
+    cp ./$1 ./${1}.$(date +%Y-%m-%d.%H%M.bak)
+  fi
+}
