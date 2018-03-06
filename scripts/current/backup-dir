@@ -4,16 +4,20 @@
 # e.g. for Dropbox or similar.
 
 # Optional overrides.
-custom_port=
 custom_local_user=
 custom_remote_user=
+port=
 
 source_dir="$1"
 backup_server="$2"
 script=$(basename "$0")
+
+# Defaults with overrides
 local_user=${custom_local_user:-$(id -un)}
 remote_user=${custom_remote_user:-$(id -un)}
-port=${custom_port:-22}
+
+# A different way of setting a 'default with override' variable.
+: ${port:=22}
 
 usage() {
   { printf "Usage: %s <directory in \$HOME dir> to back up> <backup server>\n" "${script}"; exit 0; }

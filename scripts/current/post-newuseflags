@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# Run this after changing any USE flags anywhere. It'll run through the
+# steps necessary to ensure system consistency.
+
+simple_emerge() {
+    emerge --update --deep --newuse --ask @world \
+    && exit 0 || return 1
+}
+
+bdeps_emerge() {
+    emerge --update --deep --newuse  --ask --with-bdeps=y @world \
+    && exit 0 || return 1
+}
+
+depclean_emerge() {
+    emerge --ask --depclean \
+    && exit 0 || return 1
+}
+
+revdep_rebuild() {
+    revdep-rebuild \
+    && exit 0 || return 1
+}
+
+simple_emerge || bdeps_emerge
+
+if [[ $? = 0 ]]; then
+    depclean_emerge && revdep_rebuild
+fi
+
