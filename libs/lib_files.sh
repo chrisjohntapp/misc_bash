@@ -7,9 +7,9 @@
 _LIB_FILES=1
 
 function remove_file_end_strings() {
-  #=====================================================================
+  # ====================================================================
   # Removes a string from the end of all filenames in a given directory.
-  #=====================================================================
+  # ====================================================================
   OPTIND=1
   while getopts 'd:h' argv; do
     case "${argv}" in
@@ -40,11 +40,11 @@ function remove_file_end_strings() {
 }
 
 function tip() {
-  #==========================================================================
+  # =========================================================================
   # Allows quick writing of cli notes/tips to a specific file within the tips
   # library. Alternatively prints the whole named file to stdout for reading,
   # or lists the contents of the tips library.
-  #==========================================================================
+  # =========================================================================
   local -r TIPS_PATH='Dropbox/CLI_tips'
   if [[ $# -gt 1 ]] && [[ -r "${HOME}/${TIPS_PATH}/${1}.txt" ]]; then
     f=$1; shift
@@ -66,9 +66,9 @@ function tip() {
 }
 
 function edit_tip() {
-  #==========================================================
+  # =========================================================
   # Opens the named file within the tips library for editing.
-  #==========================================================
+  # =========================================================
   local -r TIPS_PATH='Dropbox/CLI_tips'
   if [[ $# -eq 1 ]]; then
     local filename="${HOME}/${TIPS_PATH}/${1}.txt"
@@ -82,11 +82,32 @@ function edit_tip() {
   fi
 }
 
-function bakup() {
-  #========================================================
-  # Create copies of files with standard naming convention.
-  #========================================================
+function file_backup() {
+  # ============================================================
+  # Create a copy of a file, using a specific naming convention.
+  # ============================================================
   if [[ -f "$1" ]]; then
     cp ./$1 ./${1}.$(date +%Y-%m-%d.%H%M.bak)
   fi
 }
+
+function find_younger_than() {
+    # ===========================================================
+    # Lists files under the given directory created less than the 
+    # provided number of minutes ago.
+    # ===========================================================
+    if [[ $# -ne 2 ]]; then
+        printf "Usage: find_younger_than minutes search_directory\n"
+        return 1
+    fi
+    local mins=$1; local search_dir=$2 
+
+    local search_date=$(date -d "-${mins} mins" +%Y%m%d%H%M)
+    touch -t ${search_date} /tmp/find_younger_than-$$
+
+    find ${search_dir} -type f -newer /tmp/find_younger_than-$$ \
+      -print -exec ls -lt {} \;
+
+    rm /tmp/find_younger_than-$$
+}
+
