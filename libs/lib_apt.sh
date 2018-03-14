@@ -6,7 +6,7 @@
 # shellcheck disable=SC2034
 _LIB_APT=1
 
-function search_repo() {
+function apt_list_repo_contents() {
     ##########################################################################
     # Print all packages contained within one or more configured repositories.
     ##########################################################################
@@ -18,7 +18,7 @@ function search_repo() {
     fi
 
     . '/etc/os-release'
-    if [[ "${ID_LIKE}" != 'debian' ]]; then
+    if [[ "${ID}" != 'debian' ]] && [[ "${ID_LIKE}" != 'debian' ]]; then
 	printf "%s is for dpkg systems only.\n" "${func}"
 	return 1
     fi
@@ -28,9 +28,13 @@ function search_repo() {
 	return 1
     fi
 
+    local start_dir="$(pwd)"
+
     cd '/var/lib/apt/lists' || return 1
 
     local -r repo_string=$1
     cat *${repo_string}* | grep '^Package: ' | sed 's/^Package: //' | sort -u
+
+    cd ${start_dir} || return 1
 }
 
