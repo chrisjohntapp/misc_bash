@@ -60,7 +60,7 @@ function tip() {
 	else
 	    local -r tip_file="${HOME}/${tips_path}/${1}.txt"
 	    if [[ -r "${tip_file}" ]]; then
-		less -F "${tip_file}"
+		cat "${tip_file}"
 	    else
 		printf "Cannot find tip file: %s\n" "${tip_file}"
 	    fi
