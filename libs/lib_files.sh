@@ -10,12 +10,14 @@ function remove_file_end_strings() {
     # ====================================================================
     # Removes a string from the end of all filenames in a given directory.
     # ====================================================================
+    local func=$(basename "${FUNCNAME[0]}")
+
     OPTIND=1
     while getopts 'd:h' argv; do
         case "${argv}" in
             d) local target_dir="${OPTARG}" ;;
             h)
-                printf "Usage: remove_file_end_strings [ -d <work "
+                printf "Usage: %s [ -d <work " "${func}"
                 printf "directory> ] <string to remove>\n"
                 return 1
                 ;;
@@ -46,6 +48,8 @@ function tip() {
     # library. Alternatively prints the whole named file to stdout for reading,
     # or lists the contents of the tips library.
     # =========================================================================
+    local func=$(basename "${FUNCNAME[0]}")
+
     local -r tips_path='Dropbox/CLI_Tips'
     if [[ $# -gt 1 ]] && [[ -r "${HOME}/${tips_path}/${1}.txt" ]]; then
 	local subject=$1; shift
@@ -58,12 +62,12 @@ function tip() {
 	    if [[ -r "${tip_file}" ]]; then
 		less -F "${tip_file}"
 	    else
-		printf "%s%s\n" "Cannot find tip file: " "${tip_file}"
+		printf "Cannot find tip file: %s\n" "${tip_file}"
 	    fi
 	fi
     else
-	printf "Usage: tip [ -l ] | [ subject (eg. 'mysql') ] [ Notes "
-        printf "to add to file ]\n"
+	printf "Usage: %s [ -l ] | [ subject (eg. 'mysql') ] " "${func}"
+        printf "[ Notes to add to file ]\n"
     fi
 }
 
@@ -71,16 +75,18 @@ function tip_edit() {
     # =========================================================
     # Opens the named file within the tips library for editing.
     # =========================================================
+    local func=$(basename "${FUNCNAME[0]}")
+
     local -r tips_path='Dropbox/CLI_Tips'
     if [[ $# -eq 1 ]]; then
 	local tip_file="${HOME}/${tips_path}/${1}.txt"
 	if [[ -w "${tip_file}" ]]; then
 	    vim "${tip_file}"
 	else
-	    printf "File does not exist for %s.\n" "$1"
+	    printf "No tip file exists for %s.\n" "$1"
 	fi
     else
-	printf "Usage: tip_edit subject\n"
+	printf "Usage: %s subject\n" "${func}"
     fi
 }
 
@@ -88,6 +94,8 @@ function backup_file() {
     # ============================================================
     # Create a copy of a file, using a specific naming convention.
     # ============================================================
+    local func=$(basename "${FUNCNAME[0]}")
+
     if [[ -f "$1" ]]; then
 	cp ./$1 ./${1}.$(date +%Y-%m-%d.%H%M.bak)
     fi
@@ -98,18 +106,19 @@ function find_younger_than() {
     # Lists files under the given directory created less than the 
     # provided number of minutes ago.
     # ===========================================================
+    local func=$(basename "${FUNCNAME[0]}")
+
     if [[ $# -ne 2 ]]; then
-        printf "Usage: find_younger_than minutes search_directory\n"
+        printf "Usage: %s minutes search_directory\n" "${func}"
         return 1
     fi
     local mins=$1; local search_dir=$2 
 
     local search_date=$(date -d "-${mins} mins" +%Y%m%d%H%M)
-    touch -t ${search_date} /tmp/find_younger_than-$$
+    touch -t ${search_date} /tmp/${func}-$$
 
-    find ${search_dir} -type f -newer /tmp/find_younger_than-$$ \
-      -print -exec ls -lt {} \;
+    find ${search_dir} -type f -newer /tmp/${func}-$$ -print -exec ls -lt {} \;
 
-    rm /tmp/find_younger_than-$$
+    rm /tmp/${func}-$$
 }
 
