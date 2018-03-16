@@ -1,31 +1,57 @@
 #!/bin/bash
 
 # Enter an action ('list' or 'clean') and a directory, to either list or
-# delete respectively all the crufty files that Plex is likely to choke on.
+# delete respectively all the non-AV files that Plex is likely to choke on.
+# Also offers the option to change filenames to lower case, as Plex is also
+# known to choke on uppercase file extensions.
+
+# TODO: Just change file extension to lower case rather than whole file.
+#       How to list the acceptable file extensions in a variable?
 
 usage() {
     printf "Usage: %s action (list|clean) directory\n" "$(basename $0)"
     exit 1
 }
 
-seek_and_act() {
+fix_caps() {
+    for full_path in "${files[@]}"; do
+        local path_string=$(dirname "${full_path}")
+        local file_name=$(basename "${full_path}")
+
+        new_file_name="${file_name,,}"
+	mv "${path_string}"/"${file_name}" "${path_string}"/"${new_file_name}"
+    done
+}
+
+main() {
     case "$1" in
         list) local command='echo' ;;
         clean) local command='rm' ;;
     esac
 
+    local dir="$2"
+
     files=()
     while read -r -d ''; do files+=("${REPLY}")
 	"${command}" "${REPLY}"
-    done < <(find "${dir}" -type f -not -name '*.mp3' -not -name '*.mp4' -not \
-        -name '*.mkv' -not -name '*.avi' -not -name '*.jpg' -not -name \
-        '*.srt' -not -name '*.sub' -not -name '*.png' -not -name '*.idx' \
-        -not -name '*.m4v' -not -name '*.flac' -not -name '*.cue' -print0)
+    done < <(find "${dir}" -type f -not -name '*.mp3' -not -name '*.mp4' \
+	-not -name '*.mkv' -not -name '*.avi' -not -name '*.jpg' -not \
+	-name '*.srt' -not -name '*.sub' -not -name '*.png' -not -name \
+	'*.idx' -not -name '*.m4v' -not -name '*.flac' -not -name '*.cue' \
+	-not -name '*.ogg' -not -name '*.m4a' -not -name '*.m3u' -not \
+	-name '*.jpeg' -not -name '*.wmv' -not -name '*.wma' -not -name \
+	'*.bmp' -print0)
+
+    if [[ -n "${files[@]}" ]] && [[ "$1" = 'list' ]]; then
+        printf "\nWould you like to fix uppercase extensions? "
+	read -rep "[y/N] " response
+        case "${response}" in
+            [yY][eE][sS]|[yY]) fix_caps ${files[@]} ;;
+            *) { printf "\nOK, bye.\n"; exit 0; } ;;
+        esac
+    fi
 }
 
 [[ $# = 2 ]] || usage
 
-action="$1"
-dir="$2"
-
-seek_and_act "${action}" "${dir}"
+main $@
