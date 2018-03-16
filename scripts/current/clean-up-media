@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# Enter an action ('list' or 'clean') and a directory, to either list or
+# delete respectively all the crufty files that Plex is likely to choke on.
+
+usage() {
+    printf "Usage: %s action (list|clean) directory\n" "$(basename $0)"
+    exit 1
+}
+
+seek_and_act() {
+    case "$1" in
+        list) local command='echo' ;;
+        clean) local command='rm' ;;
+    esac
+
+    files=()
+    while read -r -d ''; do files+=("${REPLY}")
+	"${command}" "${REPLY}"
+    done < <(find "${dir}" -type f -not -name '*.mp3' -not -name '*.mp4' -not \
+        -name '*.mkv' -not -name '*.avi' -not -name '*.jpg' -not -name \
+        '*.srt' -not -name '*.sub' -not -name '*.png' -not -name '*.idx' \
+        -not -name '*.m4v' -not -name '*.flac' -not -name '*.cue' -print0)
+}
+
+[[ $# = 2 ]] || usage
+
+action="$1"
+dir="$2"
+
+seek_and_act "${action}" "${dir}"
