@@ -1,0 +1,51 @@
+#!/bin/bash
+
+# Wrapper around various portage tools. Run it to update the system or to
+# ensure consistency after changing USE flags.
+
+usage() {
+    printf "Usage: %s action (sync|tidy)\n" "$(basename $0)"
+    exit 1
+}
+
+eix_sync() {
+    eix-sync
+    # eix-remote update is handled by a postsync hook.
+}
+
+simple_emerge() {
+    emerge --update --deep --newuse --ask @world \
+    && return 0 || return 1
+}
+
+bdeps_emerge() {
+    emerge --update --deep --newuse  --ask --with-bdeps=y @world \
+    && return 0 || return 1
+}
+
+depclean_emerge() {
+    emerge --ask --depclean \
+    && return 0 || return 1
+}
+
+revdep_rebuild() {
+    revdep-rebuild \
+    && exit 0 || return 1
+}
+
+[[ $(id -un) = 'root' ]] || { printf "Must be run as root\n"; exit 2; }
+
+[[ $# = 1 ]] || usage
+
+case "$1" in
+    'sync')
+            eix_sync ;;
+    'tidy')
+            simple_emerge || bdeps_emerge           
+
+            if [[ $? = 0 ]]; then
+                depclean_emerge && revdep_rebuild
+            fi
+	    ;;
+esac
+
