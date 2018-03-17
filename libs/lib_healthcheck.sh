@@ -37,7 +37,7 @@ function pingable() {
 
     : ${num_pings:=3}
 
-    local -r fqdn=$1
+    local -r fqdn="$1"
     if [[ -z "${fqdn}" ]]; then
 	printf "No FQDN supplied.\n"
 	return 1
@@ -50,7 +50,9 @@ function pingable() {
 	resolver=""
     fi
 
-    if [[ -z "$(dig "${resolver}""${fqdn}" a +short)" ]]; then
+    local dig_result="$(dig ${resolver}"${fqdn}" a +short)"
+
+    if [[ -z "${dig_result}" ]]; then
 	printf "Cannot resolve that FQDN.\n"
 	return 2
     fi
