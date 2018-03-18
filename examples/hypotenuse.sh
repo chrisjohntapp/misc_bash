@@ -1,17 +1,16 @@
 #!/bin/sh
+
 # calculate the length of the hypotenuse of a Pythagorean triangle
 # using hypotenuse^2 = adjacent^2 + opposite^2
 
-echo -n "Enter the Adjacent length: "
-read adjacent
-echo -n "Enter the Opposite length: "
-read opposite
+read -rep "Adjacent length? " adjacent
+read -rep "Opposite length? " opposite
 
-osquared=$(($opposite ** 2))
-asquared=$(($adjacent ** 2))
-hsquared=$(($osquared + $asquared))
+o_squared=$(( $opposite ** 2 ))
+a_squared=$(( $adjacent ** 2 ))
+h_squared=$(( $o_squared + $a_squared ))
 
-hypotenuse=$(echo "scale=3;sqrt ($hsquared)" | bc)
+hypotenuse=$(printf "scale=3; sqrt ($h_squared)\n" | bc)
 
-echo "The Hypotenuse is $hypotenuse"
+printf "The Hypotenuse is %s\n" "${hypotenuse}"
 

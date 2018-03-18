@@ -1,14 +1,13 @@
 #!/bin/bash
 
-bailout()
-{
-  logger -t $tag “$0 FINISHING. Signalling $pid to do the same.”
+bailout() {
+  logger -t $tag "$0 FINISHING. Signalling $pid to do the same."
   touch /tmp/hastop.$pid
   while [ -f /tmp/hastop.$pid ]
   do
   sleep 5
   done
-  logger -t $tag “$0 FINISHED.”
+  logger -t $tag "$0 FINISHED."
   exit 0
 }
 

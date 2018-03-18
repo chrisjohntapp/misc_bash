@@ -16,9 +16,9 @@ printf "Welcome to %s (%s).\n\n" "$DISTRIB_DESCRIPTION" "$(uname -r)"
  
 date=$(date)
  
-LOAD1=`cat /proc/loadavg | awk {'print $1'}`
-LOAD5=`cat /proc/loadavg | awk {'print $2'}`
-LOAD15=`cat /proc/loadavg | awk {'print $3'}`
+LOAD1=$(cat /proc/loadavg | cut -d ' ' -f 1)
+LOAD5=$(cat /proc/loadavg | cut -d ' ' -f 2)
+LOAD15=$(cat /proc/loadavg | cut -d ' ' -f 3)
  
 uptime=$(cat /proc/uptime | cut -f1 -d.)
 upDays=$((uptime/60/60/24))
@@ -26,7 +26,7 @@ upHours=$((uptime/60/60%24))
 upMins=$((uptime/60%60))
 upSecs=$((uptime%60))
  
-root_usage=$(df -h / | awk '/\// {print $4}'|grep -v "^$")
+root_usage=$(df -h / | awk '/\// {print $4}'| grep -v "^$")
 fsperm=$(mount | grep root | awk '{print $6}' | awk -F"," '{print $1}')
  
 memory_usage=$(free -m | awk '/Mem:/ { total=$2 } /buffers\/cache/ { used=$3 } END { printf("%3.1f%%", used/total*100)}')
