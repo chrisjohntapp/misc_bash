@@ -17,20 +17,6 @@ function run_as_cron() {
     [[ $# = 2 ]] || \
         { printf "Usage: %s env_file command\n" "${func}"; return 1; }
 
-    # Export args to subshell. We run the main command in a subshell to
-    # prevent exec replacing the controlling shell (this is a function
-    # to be called from an interactive shell after all).
-
-    export local ENVFILE="$1" COMMAND="$2"
-
-    (
-        exec /usr/bin/env -i /bin/bash -c \
-        "
-            set -a;
-            . ${ENVFILE};
-            set +a;
-
-            ${COMMAND}
-        "
-    )
+    /usr/bin/env -i /bin/bash -c ". $1; $2"
 }
+
