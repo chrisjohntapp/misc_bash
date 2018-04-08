@@ -1,0 +1,26 @@
+#!/bin/bash
+
+email_recip=root
+
+date=$(date +%Y%m%d-%H%M)
+out_dir=$(mktemp -d)
+
+eval $@ 1>${out_dir}/err 2>${out_dir}/out
+retval=$?
+
+if [[ ${retval} != 0 ]]; then
+    > ${out_dir}/report
+    echo "Date: ${date}" >> ${out_dir}/report
+    echo "Exit code: ${retval}" >> ${out_dir}/report
+
+    echo "STDOUT: " >> ${out_dir}/report
+    cat ${out_dir}/out >> ${out_dir}/report
+
+    echo "STDERR: " >> ${out_dir}/report
+    cat ${out_dir}/err >> ${out_dir}/report
+
+    /usr/bin/mailx -s "${HOSTNAME}: $*" $email_recip < ${out_dir}/report
+fi
+
+rm -rf ${out_dir}
+
