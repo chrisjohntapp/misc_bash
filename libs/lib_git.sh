@@ -6,7 +6,7 @@
 # shellcheck disable=SC2034
 _LIB_GIT=1
 
-function pull_all() {
+function git_pull_all() {
     #########################################################################
     # cd's to each directory one level beneath the current working directory,
     # and if it is a git repo, issues 'git pull', and cd's back up a level.
