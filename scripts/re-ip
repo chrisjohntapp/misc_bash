@@ -7,11 +7,8 @@ dr_gateway="192.168.2.254"
 primary_net="10.110.73"
 dr_net="192.168.2"
 
-os_vendor=$(grep -E "^ID=" /etc/os-release | cut -d"=" -f2 | sed 's/"//g')
-os_version=$(grep -E "^VERSION_ID=" /etc/os-release | cut -d"=" -f2 | sed 's/"//g')
-
 # Logging
-readonly SCRIPT_NAME=$(basename $0)
+readonly script_name=$(basename $0)
 function log() {
     echo "$(date) $@"
     logger -s "$(date) $@" 2>> /var/log/dr.log
@@ -21,67 +18,63 @@ function err() {
     logger -s "$(date) $@" 2>> /var/log/dr.log
 }
 
+#------------------------------------------------
+
 function restart_networking_centos() {
     log "Restarting network to apply the new configuration."
-    if [[ $1 -eq 6 ]]; then
-        service network restart
-    fi
-    if [[ $1 -eq 7 ]]; then
-        systemctl restart network.service
-    fi
+    case "$1" in
+        6) service network restart ;;
+        7) systemctl restart network.service ;;
+        *) log "CentOS version not recognised."
+           exit 1 ;;
+    esac
 }
 
 function restart_networking_ubuntu() {
     log "Restaring networking to apply the new configuration."
     case "$1" in
-        "12.04") /etc/init.d/networking restart ;; 
-        "14.04") service networking restart ;;
-        "16:04") service networking restart ;; 
-        "18.04") systemctl restart systemd-networkd.service ;;
-        *) log "Ubuntu OS version not recognised."
-           exit 1
+        12.04) /etc/init.d/networking restart ;; 
+        1[46].04) service networking restart ;;
+        18.04) systemctl restart systemd-networkd.service ;;
+        *    ) log "Ubuntu version not recognised."
+               exit 1 ;;
     esac
-}
-
-function check_primary() {
-    # Check defined IP from primary site by sending ICMP requests.
-    log "Sending ICMP requests to ${primary_gateway}."
-    ping -c 1 -t 1 ${primary_gateway} > /dev/null
-}
-
-function check_dr() {
-    # Ping the replica gateway (DR Site) to make sure of network connectivity.
-    log "Testing new IP configurations in DR site by sending ICMP requests to ${dr_gateway}"
-    ping -c 1 -t 1 ${dr_gateway} > /dev/null
 }
 
 #------------------------------------------------
 
-function update_centos() {
-    log "Collecting network script files."
+function check_gateway() { # 1:gateway_ip
+    # Ping the gateway to make sure we're on the expected network.
+    log "Sending ping requests to $1."
+    ping -c 1 -t 1 $1 > /dev/null
+}
+
+#------------------------------------------------
+
+function update_centos() { # 1:os_version, 2:old_network, 3:new_network
     ifcfg_files=($(ls /etc/sysconfig/network-scripts/ifcfg-*))
     for ((i=0; i<${#ifcfg_files[@]}; i++)); do
-        log "Changing IP range to ${dr_net} on ${ifcfg_files[i]}."
-        sed -i "s/${primary_net}/${dr_net}/" ${ifcfg_files[i]}
+        log "Changing IP range from $2 to $3 on ${ifcfg_files[i]}."
+        sed -i "s/$2/$3/" ${ifcfg_files[i]}
     done
 }
 
-function update_ubuntu_12() {
-    log "Changing IP range to ${dr_net}."
-    sed -i "s/${primary_net}/${dr_net}/" /etc/network/interfaces
+function update_ubuntu_12() { # 1:old_network, 2:new_network
+    log "Changing IP range from $1 to $2 on /etc/network/interfaces."
+    sed -i "s/$1/$2/" /etc/network/interfaces
 
     log "Collecting network script files."
     ifcfg_files=($(ls /etc/network/interfaces.d/*.cfg))
     for ((i=0; i<${#ifcfg_files[@]}; i++)); do
-        log "Changing IP range to ${dr_net} on ${ifcfg_files[i]}."
-        sed -i "s/${primary_net}/${dr_net}/" ${ifcfg_files[i]}
+        log "Changing IP range from $1 to $2 on ${ifcfg_files[i]}."
+        sed -i "s/$1/$2/" ${ifcfg_files[i]}
     done
 }
 
-function update_ubuntu() {
+function update_ubuntu() { # 1:os_version
     case "$1" in
-        1[246].04) update_ubuntu_12 ;;
-        18.04    ) update_ubuntu_18 ;;
+        1[246].04) shift; update_ubuntu_12 "$@" ;;
+        18.04    ) shift; update_ubuntu_18 "$@" ;;
         *        ) log "Ubuntu OS version not recognised."
                    exit 1
     esac
@@ -89,56 +82,28 @@ function update_ubuntu() {
 
 #------------------------------------------------
 
-function revert_centos() {
-    log "Collecting network script files."
-    ifcfg_files=($(ls /etc/sysconfig/network-scripts/ifcfg-*))
-    for ((i=0; i<${#ifcfg_files[@]}; i++)); do
-        log "Changing IP range to ${primary_net} on ${ifcfg_files[i]}."
-        sed -i "s/${dr_net}/${primary_net}/" ${ifcfg_files[i]}
-    done
-}
+os_vendor=$(grep -E "^ID=" /etc/os-release | cut -d"=" -f2 | sed 's/"//g') || \
+  { log "Failed to identify OS vendor; exiting."; exit 1; }
+os_version=$(grep -E "^VERSION_ID=" /etc/os-release | cut -d"=" -f2 | sed 's/"//g') || \
+  { log "Failed to identify OS version; exiting."; exit 1; }
 
-function revert_ubuntu_12() {
-    log "Changing IP range to ${primary_net}."
-    sed -i "s/${dr_net}/${primary_net}/" /etc/network/interfaces
-
-    log "Collecting network script files."
-    ifcfg_files=($(ls /etc/network/interfaces.d/*.cfg))
-    for ((i=0; i<${#ifcfg_files[@]}; i++)); do
-        log "Changing IP range to ${primary_net} on ${ifcfg_files[i]}."
-        sed -i "s/${dr_net}/${primary_net}/" ${ifcfg_files[i]}
-    done
-}
-
-function revert_ubuntu() {
-    case "$1" in
-        1[246].04) revert_ubuntu_12 ;;
-        18.04    ) revert_ubuntu_18 ;;
-        *        ) log "Ubuntu OS version not recognised."
-                   exit 1
-    esac
-}
-
-#------------------------------------------------
-
-check_primary
+check_gateway "${primary_gateway}"
 if [ $? -eq 0 ]; then
     log "${primary_gateway} is reachable. No config changes will be applied."
     exit 0
 else
-    log "${primary_gateway} is not reachable; Assuming we've failed over to DR site."
-    log "Updating IP address."
-    update_${os_vendor} ${os_version}
+    log "${primary_gateway} is not reachable. Assuming we've failed over to DR site. Updating IP address."
+    update_${os_vendor} ${os_version} ${primary_net} ${dr_net}
     restart_networking_${os_vendor} ${os_version}
 fi
 
-check_dr
+check_gateway "${dr_gateway}"
 if [ $? -eq 0 ]; then
     log "${dr_gateway} is reachable. This VM appears to be on the DR site."
+    exit 0
 else
-    log "Replica gateway address is not reachable."
-    log "Reverting to primary site IP address."
-    revert_${os_vendor} ${os_version}
+    log "${dr_gateway} is not reachable. Something seems wrong. Reverting to primary site IP address."
+    update_${os_vendor} ${os_version} ${dr_net} ${primary_net}
     restart_networking_${os_vendor} ${os_version}
 fi
 
