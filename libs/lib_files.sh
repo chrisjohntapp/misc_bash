@@ -51,9 +51,11 @@ function tip() {
     local func=$(basename "${FUNCNAME[0]}")
 
     local -r tips_path='Dropbox/CLI_Tips'
+
     if [[ $# -gt 1 ]] && [[ -r "${HOME}/${tips_path}/${1}.txt" ]]; then
 	local subject=$1; shift
 	printf "%s\n" "$*" >> "${HOME}/${tips_path}/${subject}.txt"
+
     elif [[ $# -eq 1 ]]; then
 	if [[ "$1" = '-l' ]]; then
 	    ls "${HOME}/${tips_path}"
@@ -134,3 +136,25 @@ function trash() {
 
     mv $target ~/.Trash || { printf "Could not trash ${target}\n"; return 1; }
 }
+
+function yml_to_yaml() {
+    # ===========================================================
+    # Rename every file extension under $PWD from .yml to .yaml, by default.
+    # Can also take two arguments to replace those values.
+    # ===========================================================
+    local func=$(basename "${FUNCNAME[0]}")
+
+    if [[ $# -ne 2 ]] && [[ $# -ne 0 ]]; then
+        printf "Usage: %s || %s old_ext new_ext (don't include the dot)\n" "${func}"
+        return 1
+    fi
+
+    old_ext=${1:-yml}
+    new_ext=${2:-yaml}
+    
+    while read -r -d ''; do
+        file=${REPLY%.${old_ext}}
+        mv "${REPLY}" "${file}.${new_ext}"
+    done < <(find ${PWD} -type f -name "*.${old_ext}" -print0)
+}
+
