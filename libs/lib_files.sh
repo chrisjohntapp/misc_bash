@@ -103,7 +103,7 @@ function backup_file() {
 
 function find_younger_than() {
     # ===========================================================
-    # Lists files under the given directory created less than the 
+    # Lists files under the given directory created less than the
     # provided number of minutes ago.
     # ===========================================================
     local func=$(basename "${FUNCNAME[0]}")
@@ -122,3 +122,15 @@ function find_younger_than() {
     rm /tmp/${func}-$$
 }
 
+function trash() {
+    # ===========================================================
+    # Move file/dir to ${HOME}/.Trash (rather than rm'ing it).
+    # ===========================================================
+    local func=$(basename "${FUNCNAME[0]}")
+
+    [[ $# -eq 1 ]] || { printf "Usage: %s file|dir\n"; return 1; }
+
+    local target="$1"
+
+    mv $target ~/.Trash || { printf "Could not trash ${target}\n"; return 1; }
+}

@@ -1,0 +1,129 @@
+#!/bin/bash
+# The script will be worked on RHEL/Fedora/CentOS.
+# TODO: make another version to work with all versions of Ubuntu
+
+primary_ip_check="192.168.1.254"
+replica_ip_check="192.168.2.254"
+primary_net="19.168.1"
+replica_net="192.168..2"
+keep_alive_file="/etc/keepalived/keepalived.conf"
+hosts_file="/etc/hosts"
+fstab_file="/etc/fstab"
+exports_file="/etc/exports"
+# Logging function
+readonly SCRIPT_NAME=$(basename $0)
+log() {
+  echo "$(date) $@"
+# logger -p user.error -t $SCRIPT_NAME "$@"
+  logger -s "$(date) $@" 2>> /var/log/dr.log
+}
+err() {
+  echo "$(date) $@" >&2
+# logger -p user.error -t $SCRIPT_NAME "$@"
+  logger -s "$(date) $@" 2>> /var/log/dr.log
+}
+# First Step: Checking defined IP from primary site by sending ICMP requests to the IP.
+# Ping the primary default gateway.
+log "Start to send ICMP requests to $primary_ip_check."
+ping -c 1 -t 1 $primary_ip_check > /dev/null
+if [ $? -eq 0 ]; then
+               # Ping successful, no change is needed.
+               log "$primary_ip_check is reachable in primary site and no disaster has been occurred. So no change will be applied on configurations."
+               exit 0
+# Ping unsuccessful and IP address should change to DR site IP range.
+else
+               # Changing address to DR site IP range and change default gateway as well.
+               log "$primary_ip_check is not reachable, script is going to changing IP address and anyother configuration by using replica site IP addresses."
+               #Collecting all network script files
+               log "Collecting network script files."
+               ifcfg_files=($(ls /etc/sysconfig/network-scripts/ifcfg-*))
+               for ((i=0; i<${#ifcfg_files[@]}; i++)); do
+                              #change IP range according to each array elements
+                              log "Changing IP range to $replica_net on ${ifcfg_files[i]} ."
+                              sed -i "s@$primary_net@$replica_net@" ${ifcfg_files[i]}
+               done
+               log "Apply the new configuration on ethernet devices."
+               OS_ver=$(lsb_release -a | grep Release | awk '{print $2}'| cut -d '.' -f1)
+               if [ $OS_ver -eq 6 ]; then
+                              service network restart
+               fi
+               if [ $OS_ver -eq 7 ]; then
+                              systemctl status network.service
+               fi
+fi
+# Ping the replica gateway (DR Site) to make sure about network connectivity.
+log "Testing new IP configurations in DR site by sending ICMP requests to $replica_ip_check"
+ping -c 1 -t 1 $replica_ip_check > /dev/null
+if [ $? -eq 0 ]; then
+               # Ping successful and disaster recovery has been performed successfully.
+               log "$replica_ip_check is reachable and there is no problem. This is replica virtual machine."
+               #Change IP range to $replica_net in /etc/fstab, /etc/keepalived/keepalived.conf, /etc/exports, /etc/hosts
+               if [ -f "$keep_alive_file" ]
+               then
+                              log "IP range has been change to $replica_net in $keep_alive_file ."
+                              sed -i "s@$primary_net@$replica_net@" $keep_alive_file
+               else
+                              log "$keep_alive_file was not found."
+                              echo "$keep_alive_file was not found."
+               fi
+               if [ -f "$exports_file" ]
+               then
+                              log "IP range has been changed to $replica_net in $exports_file ."
+                              sed -i "s@$primary_net@$replica_net@" $exports_file
+               else
+                              log "$exports_file was not found, seems NFS service has not configured."
+                              echo "$exports_file was not found."
+               fi
+               sed -i "s@$primary_net@$replica_net@" $fstab_file
+               log "IP range has been changed to $replica_net in $fstab_file (If there was any IP with the specified IP range) ."
+               sed -i "s/1.237/2.201/g" $hosts_file
+               sed -i "s/1.238/2.202/g" $hosts_file
+               sed -i "s/1.239/2.203/g" $hosts_file
+               sed -i "s@$primary_net@$replica_net@" $hosts_file
+               log "IP range has been changed to $replica_net in $hosts_file ."
+               exit 0
+else
+               # Ping unsuccessful, so there is wrong DR detection and IP configuration should revert to primary site IP range.
+               log "Primary and replica addresses are not reachable, so there is something wrong!!!"
+               log "Script is going to configure primary site configuration on machine."
+               #Collecting all network script files
+               log "Collecting network script files."
+               ifcfg_files=($(ls /etc/sysconfig/network-scripts/ifcfg-*))
+               for ((i=0; i<${#ifcfg_files[@]}; i++)); do
+                              #change IP range according to each array elements
+                              log "Changing IP range to $primary_net on ${ifcfg_files[i]} ."
+                              sed -i "s@$replica_net@$primary_net@" ${ifcfg_files[i]}
+               done
+               #Change IP range to $primary_net in /etc/fstab, /etc/keepalived/keepalived.conf, /etc/exports, /etc/hosts
+               if [ -f "$keep_alive_file" ]
+               then
+                              log "IP range has been change to $primary_net in $keep_alive_file ."
+                              sed -i "s@$replica_net@$primary_net@" $keep_alive_file
+               else
+                              log "$keep_alive_file was not found."
+                              echo "$keep_alive_file was not found."
+               fi
+               if [ -f "$exports_file" ]
+               then
+                              log "IP range has been changed to $primary_net in $exports_file ."
+                              sed -i "s@$replica_net@$primary_net@" $exports_file
+               else
+                              log "$exports_file was not found, seems NFS service has not configured."
+                              echo "$exports_file was not found."
+               fi
+               sed -i "s@$replica_net@$primary_net@" $fstab_file
+               log "IP range has been changed to $primary_net in $fstab_file (If there was any IP with the specified IP range) ."
+               sed -i "s/2.201/1.237/g" $hosts_file
+               sed -i "s/2.202/1.238/g" $hosts_file
+               sed -i "s/2.203/1.239/g" $hosts_file
+               sed -i "st@$replica_net@$primary_ne@" $hosts_file
+               log "IP range has been changed to $replica_net in $hosts_file ."
+               log "Apply the new configuration on ethernet devices."
+               OS_ver=$(lsb_release -a | grep Release | awk '{print $2}'| cut -d '.' -f1)
+               if [ $OS_ver -eq 6 ]; then
+                              service network restart
+               fi
+               if [ $OS_ver -eq 7 ]; then
+                              systemctl status network.service
+               fi
+fi
