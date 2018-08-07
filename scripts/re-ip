@@ -24,11 +24,10 @@ function err() {
 
 function flush_interfaces() {
     interfaces=$(basename -a /sys/class/net/*)
-    for ((i=0; i<${#interfaces[@]}; i++)); do
-        log "Flushing config on ${interfaces[i]}."
-        ip addr flush ${interfaces[i]}
+    for i in ${interfaces}; do
+        log "Flushing config on $i."
+        ip addr flush $i
     done
- 
 }
 
 function restart_networking_centos() { # 1:os_version
@@ -46,9 +45,11 @@ function restart_networking_ubuntu() { # 1:os_version
     case "$1" in
         12.04) /etc/init.d/networking stop
                /etc/init.d/networking start ;;
-        14.04) ifdown -a
-               ifup -a ;;
-        16.04) flush_interfaces
+        14.04) # See Ubuntu bug #1301015 for reasoning behind this.
+               ifdown -a --exclude=lo
+               ifup -a --exclude=lo ;;
+        16.04) # Previous IPs are not removed by systemctl in 16.04.
+               flush_interfaces
                systemctl restart networking.service ;;
         18.04) systemctl restart systemd-networkd.service ;;
         *    ) log "Ubuntu version not recognised."
