@@ -1,11 +1,13 @@
 #!/bin/bash
 
-# Does not change hosts file, fstab, exports
+# Does not currently change hosts file, fstab, exports etc, which may be required.
 
-primary_gateway="10.110.73.1"
-dr_gateway="192.168.2.254"
+# Does not and should not change resolv.conf, as both resolvers should be configured anyway.
+
 primary_net="10.110.73"
+primary_gateway="10.110.73.1"
 dr_net="192.168.2"
+dr_gateway="192.168.2.254"
 
 # Logging
 readonly script_name=$(basename $0)
@@ -20,8 +22,17 @@ function err() {
 
 #------------------------------------------------
 
-function restart_networking_centos() {
-    log "Restarting network to apply the new configuration."
+function flush_interfaces() {
+    interfaces=$(basename -a /sys/class/net/*)
+    for ((i=0; i<${#interfaces[@]}; i++)); do
+        log "Flushing config on ${interfaces[i]}."
+        ip addr flush ${interfaces[i]}
+    done
+ 
+}
+
+function restart_networking_centos() { # 1:os_version
+    log "Restarting networking to apply the new configuration."
     case "$1" in
         6) service network restart ;;
         7) systemctl restart network.service ;;
@@ -30,11 +41,15 @@ function restart_networking_centos() {
     esac
 }
 
-function restart_networking_ubuntu() {
+function restart_networking_ubuntu() { # 1:os_version
     log "Restaring networking to apply the new configuration."
     case "$1" in
-        12.04) /etc/init.d/networking restart ;; 
-        1[46].04) service networking restart ;;
+        12.04) /etc/init.d/networking stop
+               /etc/init.d/networking start ;;
+        14.04) ifdown -a
+               ifup -a ;;
+        16.04) flush_interfaces
+               systemctl restart networking.service ;;
         18.04) systemctl restart systemd-networkd.service ;;
         *    ) log "Ubuntu version not recognised."
                exit 1 ;;
@@ -43,9 +58,8 @@ function restart_networking_ubuntu() {
 
 #------------------------------------------------
 
-function check_gateway() { # 1:gateway_ip
-    # Ping the gateway to make sure we're on the expected network.
-    log "Sending ping requests to $1."
+function ping_gateway() { # 1:gateway_ip
+    log "Pinging gateway $1."
     ping -c 1 -t 1 $1 > /dev/null
 }
 
@@ -54,28 +68,28 @@ function check_gateway() { # 1:gateway_ip
 function update_centos() { # 1:os_version, 2:old_network, 3:new_network
     ifcfg_files=($(ls /etc/sysconfig/network-scripts/ifcfg-*))
     for ((i=0; i<${#ifcfg_files[@]}; i++)); do
-        log "Changing IP range from $2 to $3 on ${ifcfg_files[i]}."
+        log "Changing network from $2 to $3 on ${ifcfg_files[i]}."
         sed -i "s/$2/$3/" ${ifcfg_files[i]}
     done
 }
 
 function update_ubuntu_12() { # 1:old_network, 2:new_network
-    log "Changing IP range from $1 to $2 on /etc/network/interfaces."
+    log "Changing network from $1 to $2 on /etc/network/interfaces."
     sed -i "s/$1/$2/" /etc/network/interfaces
 
     log "Collecting network script files."
     ifcfg_files=($(ls /etc/network/interfaces.d/*.cfg))
     for ((i=0; i<${#ifcfg_files[@]}; i++)); do
-        log "Changing IP range from $1 to $2 on ${ifcfg_files[i]}."
+        log "Changing network from $1 to $2 on ${ifcfg_files[i]}."
         sed -i "s/$1/$2/" ${ifcfg_files[i]}
     done
 }
 
-function update_ubuntu() { # 1:os_version
+function update_ubuntu() { # 1:os_version, 2:old_network, 3:new_network
     case "$1" in
         1[246].04) shift; update_ubuntu_12 "$@" ;;
         18.04    ) shift; update_ubuntu_18 "$@" ;;
-        *        ) log "Ubuntu OS version not recognised."
+        *        ) log "Ubuntu version not recognised."
                    exit 1
     esac
 }
@@ -87,23 +101,24 @@ os_vendor=$(grep -E "^ID=" /etc/os-release | cut -d"=" -f2 | sed 's/"//g') || \
 os_version=$(grep -E "^VERSION_ID=" /etc/os-release | cut -d"=" -f2 | sed 's/"//g') || \
   { log "Failed to identify OS version; exiting."; exit 1; }
 
-check_gateway "${primary_gateway}"
+ping_gateway "${primary_gateway}"
 if [ $? -eq 0 ]; then
-    log "${primary_gateway} is reachable. No config changes will be applied."
+    log "${primary_gateway} is reachable. This VM appears to be on primary site network. No changes will be applied."
     exit 0
 else
-    log "${primary_gateway} is not reachable. Assuming we've failed over to DR site. Updating IP address."
+    log "${primary_gateway} is not reachable. Assuming we're on the DR site. Updating network config accordingly."
     update_${os_vendor} ${os_version} ${primary_net} ${dr_net}
     restart_networking_${os_vendor} ${os_version}
 fi
 
-check_gateway "${dr_gateway}"
+ping_gateway "${dr_gateway}"
 if [ $? -eq 0 ]; then
-    log "${dr_gateway} is reachable. This VM appears to be on the DR site."
+    log "${dr_gateway} is reachable. This VM appears to be on the DR network. No changes will be applied."
     exit 0
 else
-    log "${dr_gateway} is not reachable. Something seems wrong. Reverting to primary site IP address."
+    log "${dr_gateway} is not reachable. Something is not right. Reverting to primary site network config."
     update_${os_vendor} ${os_version} ${dr_net} ${primary_net}
     restart_networking_${os_vendor} ${os_version}
 fi
 
+exit $?
