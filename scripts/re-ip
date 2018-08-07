@@ -9,7 +9,9 @@ primary_gateway="10.110.73.1"
 dr_net="192.168.2"
 dr_gateway="192.168.2.254"
 
-# Logging
+#------------------------------------------------
+# Setup Logging
+
 readonly script_name=$(basename $0)
 function log() {
     echo "$(date) $@"
@@ -21,6 +23,15 @@ function err() {
 }
 
 #------------------------------------------------
+# Check Location
+
+function ping_gateway() { # 1:gateway_ip
+    log "Pinging gateway $1."
+    ping -c 1 -t 1 $1 > /dev/null
+}
+
+#------------------------------------------------
+# Restart Networking
 
 function flush_interfaces() {
     interfaces=$(basename -a /sys/class/net/*)
@@ -58,13 +69,7 @@ function restart_networking_ubuntu() { # 1:os_version
 }
 
 #------------------------------------------------
-
-function ping_gateway() { # 1:gateway_ip
-    log "Pinging gateway $1."
-    ping -c 1 -t 1 $1 > /dev/null
-}
-
-#------------------------------------------------
+# Update Configuration
 
 function update_centos() { # 1:os_version, 2:old_network, 3:new_network
     ifcfg_files=($(ls /etc/sysconfig/network-scripts/ifcfg-*))
@@ -96,11 +101,19 @@ function update_ubuntu() { # 1:os_version, 2:old_network, 3:new_network
 }
 
 #------------------------------------------------
+# Main
 
 os_vendor=$(grep -E "^ID=" /etc/os-release | cut -d"=" -f2 | sed 's/"//g') || \
   { log "Failed to identify OS vendor; exiting."; exit 1; }
 os_version=$(grep -E "^VERSION_ID=" /etc/os-release | cut -d"=" -f2 | sed 's/"//g') || \
   { log "Failed to identify OS version; exiting."; exit 1; }
+
+case "${os_vendor}" in
+    ubuntu) : ;;
+    centos) : ;;
+    *     ) printf "OS not supported.\n"
+            exit 0 ;;
+esac
 
 ping_gateway "${primary_gateway}"
 if [ $? -eq 0 ]; then
