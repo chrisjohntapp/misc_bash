@@ -1,16 +1,20 @@
 #!/bin/bash
 
-# Does not currently change hosts file, fstab, exports etc, which may be required.
+# Does not currently change hosts file, fstab, exports etc, which may be
+# required.
 
-# Does not and should not change resolv.conf, as both resolvers should be configured anyway.
+# Does not and should not change resolv.conf, as both resolvers should be
+# configured at all times.
 
-primary_net="10.110.73"
-primary_gateway="10.110.73.1"
-dr_net="192.168.2"
-dr_gateway="192.168.2.254"
+primary_net='10.110.73'
+primary_gateway='10.110.73.1'
+dr_net='192.168.2'
+dr_gateway='192.168.2.254'
 
-#------------------------------------------------
-# Setup Logging
+
+#==============================================================================
+# Setup Logging.
+#==============================================================================
 
 readonly script_name=$(basename $0)
 function log() {
@@ -22,19 +26,23 @@ function err() {
     logger -s "$(date) $@" 2>> /var/log/dr.log
 }
 
-#------------------------------------------------
-# Check Location
+
+#==============================================================================
+# Check Location.
+#==============================================================================
 
 function ping_gateway() { # 1:gateway_ip
-    log "Pinging gateway $1."
-    ping -c 1 -t 1 $1 > /dev/null
+    log "Pinging gateway ${1}."
+    ping -c 1 -t 1 "$1" > /dev/null
 }
 
-#------------------------------------------------
-# Restart Networking
+
+#==============================================================================
+# Restart Networking.
+#==============================================================================
 
 function flush_interfaces() {
-    interfaces=$(basename -a /sys/class/net/*)
+    interfaces="$(basename -a /sys/class/net/*)"
     for i in ${interfaces}; do
         log "Flushing config on $i."
         ip addr flush $i
@@ -68,8 +76,10 @@ function restart_networking_ubuntu() { # 1:os_version
     esac
 }
 
-#------------------------------------------------
-# Update Configuration
+
+#==============================================================================
+# Update Configuration.
+#==============================================================================
 
 function update_centos() { # 1:os_version, 2:old_network, 3:new_network
     ifcfg_files=($(ls /etc/sysconfig/network-scripts/ifcfg-*))
@@ -100,8 +110,10 @@ function update_ubuntu() { # 1:os_version, 2:old_network, 3:new_network
     esac
 }
 
-#------------------------------------------------
-# Main
+
+#==============================================================================
+# Main.
+#==============================================================================
 
 os_vendor=$(grep -E "^ID=" /etc/os-release | cut -d"=" -f2 | sed 's/"//g') || \
   { log "Failed to identify OS vendor; exiting."; exit 1; }
