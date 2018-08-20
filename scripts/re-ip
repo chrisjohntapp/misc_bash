@@ -1,10 +1,11 @@
 #!/bin/bash
 
-# Does not currently change hosts file, fstab, exports etc, which may be
-# required.
+# Currently updates network config files and /etc/hosts, then restarts
+# networking. If more changes are required (such as fstab, exports etc),
+# additional function can easily be added base on what is already here.
 
-# Does not and should not change resolv.conf, as both resolvers should be
-# configured at all times.
+# This script does not and should not change resolv.conf, as resolvers in both
+# sites should be configured.
 
 primary_net='10.110.73'
 primary_gateway='10.110.73.1'
@@ -41,7 +42,7 @@ function ping_gateway() { # 1:gateway_ip
 # Restart Networking.
 #==============================================================================
 
-function flush_interfaces() {
+function flush_interfaces() { # None
     interfaces="$(basename -a /sys/class/net/*)"
     for i in ${interfaces}; do
         log "Flushing config on $i."
@@ -54,7 +55,7 @@ function restart_networking_centos() { # 1:os_version
     case "$1" in
         6) service network restart ;;
         7) systemctl restart network.service ;;
-        *) log "CentOS version not recognised."
+        *) log "CentOS version not supported."
            exit 1 ;;
     esac
 }
@@ -81,70 +82,119 @@ function restart_networking_ubuntu() { # 1:os_version
 # Update Configuration.
 #==============================================================================
 
-function update_centos() { # 1:os_version, 2:old_network, 3:new_network
-    ifcfg_files=($(ls /etc/sysconfig/network-scripts/ifcfg-*))
-    for ((i=0; i<${#ifcfg_files[@]}; i++)); do
-        log "Changing network from $2 to $3 on ${ifcfg_files[i]}."
-        sed -i "s/$2/$3/" ${ifcfg_files[i]}
-    done
+function update_hosts_file() { # 1:old_network, 2:new_network
+    log "Changing network from $1 to $2 on all entries in /etc/hosts."
+    sed -i "s/$1/$2/g" /etc/hosts
 }
 
-function update_ubuntu_12() { # 1:old_network, 2:new_network
+function update_fstab() { # 1:old_network, 2:new_network
+    log "Changing network from $1 to $2 on all entries in /etc/fstab."
+    sed -i "s/$1/$2/g" /etc/fstab
+}
+
+function update_ubuntu_12_14_16_interfaces() { # 1:old_network, 2:new_network
     log "Changing network from $1 to $2 on /etc/network/interfaces."
-    sed -i "s/$1/$2/" /etc/network/interfaces
+    sed -i "s/$1/$2/g" /etc/network/interfaces
 
     log "Collecting network script files."
     ifcfg_files=($(ls /etc/network/interfaces.d/*.cfg))
     for ((i=0; i<${#ifcfg_files[@]}; i++)); do
         log "Changing network from $1 to $2 on ${ifcfg_files[i]}."
-        sed -i "s/$1/$2/" ${ifcfg_files[i]}
+        sed -i "s/$1/$2/g" ${ifcfg_files[i]}
     done
 }
 
-function update_ubuntu() { # 1:os_version, 2:old_network, 3:new_network
-    case "$1" in
-        1[246].04) shift; update_ubuntu_12 "$@" ;;
-        18.04    ) shift; update_ubuntu_18 "$@" ;;
-        *        ) log "Ubuntu version not recognised."
-                   exit 1
-    esac
+function update_ubuntu_18_interfaces() { # 1:old_network, 2:new_network
+    ifcfg_files=($(ls /etc/netplan/*.yaml))
+    for ((i=0; i<${#ifcfg_files[@]}; i++)); do
+        log "Changing network from $1 to $2 on ${ifcfg_files[i]}."
+        sed -i "s/$1/$2/g" ${ifcfg_files[i]}
+    done
 }
+
+function update_centos_6_7_interfaces() { # 1:old_network, 2:new_network
+    ifcfg_files=($(ls /etc/sysconfig/network-scripts/ifcfg-*))
+    for ((i=0; i<${#ifcfg_files[@]}; i++)); do
+        log "Changing network from $1 to $2 on ${ifcfg_files[i]}."
+        sed -i "s/$1/$2/g" ${ifcfg_files[i]}
+    done
+}
+
+function update_config() { # 1:os_vendor, 2:os_version, 3:old_network,
+                           # 4:new_network}
+
+    # Update OS/version-specific things first.
+    if [[ "$1" == "ubuntu" ]]; then
+        case "$2" in
+            1[246].04) shift 2; update_ubuntu_12_14_16_interfaces "$@" ;;
+            18.04    ) shift 2; update_ubuntu_18_interfaces "$@" ;;
+            *        ) log "Ubuntu version not supported."
+                       exit 1
+                       ;;
+        esac
+    elif [[ "$1" == "centos" ]]; then
+        case "$2" in
+            [67]) shift 2; update_centos_6_7_interfaces "$@" ;;
+            *   ) log "CentOS version not supported."
+                  exit 1
+                  ;;
+        esac
+    fi
+
+    # Update standard-format things.
+    update_hosts_file "$@"
+    # update_fstab "$@"
+}    
 
 
 #==============================================================================
 # Main.
 #==============================================================================
 
+# Gather info & validate.
 os_vendor=$(grep -E "^ID=" /etc/os-release | cut -d"=" -f2 | sed 's/"//g') || \
-  { log "Failed to identify OS vendor; exiting."; exit 1; }
-os_version=$(grep -E "^VERSION_ID=" /etc/os-release | cut -d"=" -f2 | sed 's/"//g') || \
-  { log "Failed to identify OS version; exiting."; exit 1; }
+    { log "Failed to identify OS vendor; exiting."; exit 1; }
+os_version=$(grep -E "^VERSION_ID=" /etc/os-release | cut -d"=" -f2 | \
+    sed 's/"//g') || { log "Failed to identify OS version; exiting."; exit 1; }
 
 case "${os_vendor}" in
-    ubuntu) : ;;
-    centos) : ;;
-    *     ) printf "OS not supported.\n"
-            exit 0 ;;
+    ubuntu)
+        if ! [[ "${os_version}" =~ 1[2468].04 ]]; then
+            log "Ubuntu OS version not supported."
+            exit 1
+        fi
+        ;;
+    centos)
+        if ! [[ "${os_version}" =~ [67] ]]; then
+            log "CentOS version not supported."
+            exit 1
+        fi
+        ;;
+    *     )
+        log "OS not supported."
+        exit 1
+        ;;
 esac
 
+# Try the primary gateway.
 ping_gateway "${primary_gateway}"
 if [ $? -eq 0 ]; then
     log "${primary_gateway} is reachable. This VM appears to be on primary site network. No changes will be applied."
     exit 0
 else
     log "${primary_gateway} is not reachable. Assuming we're on the DR site. Updating network config accordingly."
-    update_${os_vendor} ${os_version} ${primary_net} ${dr_net}
+    update_config ${os_vendor} ${os_version} ${primary_net} ${dr_net}
     restart_networking_${os_vendor} ${os_version}
 fi
 
+# Try the DR gateway.
 ping_gateway "${dr_gateway}"
 if [ $? -eq 0 ]; then
     log "${dr_gateway} is reachable. This VM appears to be on the DR network. No changes will be applied."
     exit 0
 else
     log "${dr_gateway} is not reachable. Something is not right. Reverting to primary site network config."
-    update_${os_vendor} ${os_version} ${dr_net} ${primary_net}
+    update_config ${os_vendor} ${os_version} ${dr_net} ${primary_net}
     restart_networking_${os_vendor} ${os_version}
 fi
 
-exit $?
