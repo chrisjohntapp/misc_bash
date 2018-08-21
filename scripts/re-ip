@@ -17,14 +17,14 @@ dr_gateway='192.168.2.254'
 # Setup Logging.
 #==============================================================================
 
-readonly script_name=$(basename $0)
+readonly script_name=$(basename "$0")
 function log() {
-    echo "$(date) $@"
-    logger -s "$(date) $@" 2>> /var/log/dr.log
+    echo "$(date)" "$@"
+    logger -s "$(date)" "$@" 2>> /var/log/dr.log
 }
 function err() {
-    echo "$(date) $@" >&2
-    logger -s "$(date) $@" 2>> /var/log/dr.log
+    echo "$(date)" "$@" >&2
+    logger -s "$(date)" "$@" 2>> /var/log/dr.log
 }
 
 
@@ -46,7 +46,7 @@ function flush_interfaces() { # None
     interfaces="$(basename -a /sys/class/net/*)"
     for i in ${interfaces}; do
         log "Flushing config on $i."
-        ip addr flush $i
+        ip addr flush "$i"
     done
 }
 
@@ -100,7 +100,7 @@ function update_ubuntu_12_14_16_interfaces() { # 1:old_network, 2:new_network
     ifcfg_files=($(ls /etc/network/interfaces.d/*.cfg))
     for ((i=0; i<${#ifcfg_files[@]}; i++)); do
         log "Changing network from $1 to $2 on ${ifcfg_files[i]}."
-        sed -i "s/$1/$2/g" ${ifcfg_files[i]}
+        sed -i "s/$1/$2/g" "${ifcfg_files[i]}"
     done
 }
 
@@ -108,7 +108,7 @@ function update_ubuntu_18_interfaces() { # 1:old_network, 2:new_network
     ifcfg_files=($(ls /etc/netplan/*.yaml))
     for ((i=0; i<${#ifcfg_files[@]}; i++)); do
         log "Changing network from $1 to $2 on ${ifcfg_files[i]}."
-        sed -i "s/$1/$2/g" ${ifcfg_files[i]}
+        sed -i "s/$1/$2/g" "${ifcfg_files[i]}"
     done
 }
 
@@ -116,7 +116,7 @@ function update_centos_6_7_interfaces() { # 1:old_network, 2:new_network
     ifcfg_files=($(ls /etc/sysconfig/network-scripts/ifcfg-*))
     for ((i=0; i<${#ifcfg_files[@]}; i++)); do
         log "Changing network from $1 to $2 on ${ifcfg_files[i]}."
-        sed -i "s/$1/$2/g" ${ifcfg_files[i]}
+        sed -i "s/$1/$2/g" "${ifcfg_files[i]}"
     done
 }
 
@@ -183,8 +183,8 @@ if [ $? -eq 0 ]; then
     exit 0
 else
     log "${primary_gateway} is not reachable. Assuming we're on the DR site. Updating network config accordingly."
-    update_config ${os_vendor} ${os_version} ${primary_net} ${dr_net}
-    restart_networking_${os_vendor} ${os_version}
+    update_config "${os_vendor}" "${os_version}" "${primary_net}" "${dr_net}"
+    restart_networking_"${os_vendor}" "${os_version}"
 fi
 
 # Try the DR gateway.
@@ -194,7 +194,7 @@ if [ $? -eq 0 ]; then
     exit 0
 else
     log "${dr_gateway} is not reachable. Something is not right. Reverting to primary site network config."
-    update_config ${os_vendor} ${os_version} ${dr_net} ${primary_net}
-    restart_networking_${os_vendor} ${os_version}
+    update_config "${os_vendor}" "${os_version}" "${dr_net}" "${primary_net}"
+    restart_networking_"${os_vendor}" "${os_version}"
 fi
 
