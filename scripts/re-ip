@@ -47,37 +47,64 @@ function ping_gateway() { # 1:gateway_ip
 #===============================================================================
 
 function flush_interfaces() { # None
+
+    # Remove all IP addresses from all network interfaces, except loopback.
+
     interfaces="$(basename -a /sys/class/net/*)"
     for i in ${interfaces}; do
-        log "Flushing config on $i."
-        ip addr flush "$i"
+        if [[ $i != 'lo' ]]; then
+            log "Flushing config on $i."
+            ip addr flush "$i"
+        fi
     done
 }
 
 function restart_networking_centos() { # 1:os_version
+
+    # Run scripts to restart networking, applying a new configuration.
+
     log "Restarting networking to apply the new configuration."
     case "$1" in
-        6) service network restart ;;
-        7) systemctl restart network.service ;;
-        *) log "CentOS version not supported."
-           exit 1 ;;
+        6)
+            service network restart
+            ;;
+        7)
+            systemctl restart network.service
+            ;;
+        *) 
+            log "CentOS version not supported."
+            exit 1
+            ;;
     esac
 }
 
 function restart_networking_ubuntu() { # 1:os_version
+
+    # Run scripts to restart networking, applying a new configuration.
+
     log "Restaring networking to apply the new configuration."
     case "$1" in
-        12.04) /etc/init.d/networking stop
-               /etc/init.d/networking start ;;
-        14.04) # See Ubuntu bug #1301015 for reasoning behind this.
-               ifdown -a --exclude=lo
-               ifup -a --exclude=lo ;;
-        16.04) # Previous IPs are not removed by systemctl in 16.04.
-               flush_interfaces
-               systemctl restart networking.service ;;
-        18.04) systemctl restart systemd-networkd.service ;;
-        *    ) log "Ubuntu version not recognised."
-               exit 1 ;;
+        12.04)
+            /etc/init.d/networking stop
+            /etc/init.d/networking start
+            ;;
+        14.04)
+            # See Ubuntu bug #1301015 for reasoning behind this.
+            ifdown -a --exclude=lo
+            ifup -a --exclude=lo
+            ;;
+        16.04)
+            # Previous IPs are not removed by systemctl in 16.04.
+            flush_interfaces
+            systemctl restart networking.service
+            ;;
+        18.04)
+            systemctl restart systemd-networkd.service
+            ;;
+        *    )
+            log "Ubuntu version not recognised."
+            exit 1
+            ;;
     esac
 }
 
@@ -87,6 +114,10 @@ function restart_networking_ubuntu() { # 1:os_version
 #===============================================================================
 
 function update_file() { # 1:file, 2:old_prefix, 3:new_prefix
+
+    # Check for old_prefix in file, and if found change all examples for
+    # new_prefix.
+
     if ! [[ $(cat "$1") =~ $2 ]]; then
         log "No IP address updates required."
         return
@@ -97,12 +128,16 @@ function update_file() { # 1:file, 2:old_prefix, 3:new_prefix
 }
 
 function update_ubuntu_12_14_16_interfaces() { # 1:old_prefix, 2:new_prefix
-    found_old_prefixes=$(find /etc/network/interfaces /etc/network/interfaces.d 
-        -type f -exec grep "$1" {} \;)
+
+    # Check for old_prefix in network interface config files and if found
+    # replace all examples with new_prefix.
+
+    found_old_prefixes=$(find /etc/network/interfaces \
+        /etc/network/interfaces.d -type f -exec grep "$1" {} \;)
 
     if [[ -z ${found_old_prefixes} ]]; then
         log "No IP address updates required."
-        return
+        return 10
     else
         log "Changing network prefix from $1 to $2 on /etc/network/interfaces."
         sed -i "s/$1/$2/g" /etc/network/interfaces
@@ -118,12 +153,16 @@ function update_ubuntu_12_14_16_interfaces() { # 1:old_prefix, 2:new_prefix
 }
 
 function update_ubuntu_18_interfaces() { # 1:old_prefix, 2:new_prefix
-    found_old_prefixes=$(find /etc/netplan -type f -name '*.yaml'
+
+    # Check for old_prefix in network interface config files and if found
+    # replace all examples with new_prefix.
+
+    found_old_prefixes=$(find /etc/netplan -type f -name '*.yaml' \
         -exec grep "$1" {} \;)
 
     if [[ -z ${found_old_prefixes} ]]; then
         log "No IP address updates required."
-        return
+        return 10
     else
         log "Collecting network config files."
         ifcfg_files=($(ls /etc/netplan/*.yaml))
@@ -136,12 +175,16 @@ function update_ubuntu_18_interfaces() { # 1:old_prefix, 2:new_prefix
 }
 
 function update_centos_6_7_interfaces() { # 1:old_prefix, 2:new_prefix
-    found_old_prefixes=$(find /etc/sysconfig/network-scripts -type f
+
+    # Check for old_prefix in network interface config files and if found
+    # replace all examples with new_prefix.
+
+    found_old_prefixes=$(find /etc/sysconfig/network-scripts -type f \
         -name 'ifcfg-*' -exec grep "$1" {} \;)
 
     if [[ -z ${found_old_prefixes} ]]; then
         log "No IP address updates required."
-        return
+        return 10
     else
         log "Collecting network config files."
         ifcfg_files=($(ls /etc/sysconfig/network-scripts/ifcfg-*))
@@ -156,24 +199,43 @@ function update_centos_6_7_interfaces() { # 1:old_prefix, 2:new_prefix
 function update_config() { # 1:os_vendor, 2:os_version, 3:old_prefix,
                            # 4:new_prefix}
 
+    # Checks OS vendor and version and calls appropriate function to update
+    # network config file(s). If changes are made by that function it then
+    # calls a function to restart the host networking.
+    # Then it calls functions to update any additional files which may contain
+    # IP addresses (/etc/hosts for example).
+
     if [[ "$1" == "ubuntu" ]]; then
         case "$2" in
-            1[246].04) shift 2; update_ubuntu_12_14_16_interfaces "$@" ;;
-            18.04    ) shift 2; update_ubuntu_18_interfaces "$@" ;;
-            *        ) log "Ubuntu version not supported."
-                       exit 1
-                       ;;
+            1[246].04)
+                update_ubuntu_12_14_16_interfaces "$3" "$4"
+                [[ $? -ne 10 ]] && restart_networking_"$1" "$2"
+                update_file /etc/hosts "$3" "$4"
+                # update_file /etc/foobar "$3" "$4"
+                ;;
+            18.04    )
+                update_ubuntu_18_interfaces "$3" "$4"
+                [[ $? -ne 10 ]] && restart_networking_"$1" "$2"
+                update_file /etc/hosts "$3" "$4"
+                ;;
+            *        )
+                log "Ubuntu version not supported."
+                exit 1
+                ;;
         esac
     elif [[ "$1" == "centos" ]]; then
         case "$2" in
-            [67]) shift 2; update_centos_6_7_interfaces "$@" ;;
-            *   ) log "CentOS version not supported."
-                  exit 1
-                  ;;
+            [67])
+                update_centos_6_7_interfaces "$3" "$4"
+                [[ $? -ne 10 ]] && restart_networking_"$1" "$2"
+                update_file /etc/hosts "$3" "$4"
+                ;;
+            *   )
+                log "CentOS version not supported."
+                exit 1
+                ;;
         esac
     fi
-
-    update_file /etc/hosts "$@"
 }    
 
 
@@ -192,15 +254,18 @@ case "${os_vendor}" in
         if ! [[ "${os_version}" =~ 1[2468].04 ]]; then
             log "Ubuntu OS version not supported."
             exit 1
-        fi ;;
+        fi
+        ;;
     centos)
         if ! [[ "${os_version}" =~ [67] ]]; then
             log "CentOS version not supported."
             exit 1
-        fi ;;
+        fi
+        ;;
     *     )
         log "OS not supported."
-        exit 1 ;;
+        exit 1
+        ;;
 esac
 
 # Try the primary gateway.
@@ -213,7 +278,6 @@ else
     log "${primary_gateway} is not reachable. Assuming we're on the DR site. \
     Updating IP address(s) to DR site prefix, if required."
     update_config "${os_vendor}" "${os_version}" "${primary_net}" "${dr_net}"
-    restart_networking_"${os_vendor}" "${os_version}"
 fi
 
 # Try the DR gateway.
@@ -225,6 +289,5 @@ else
     log "${dr_gateway} is not reachable. Assuming we are on primary network. \
     Updating IP address(es) to primary site prefix, if required."
     update_config "${os_vendor}" "${os_version}" "${dr_net}" "${primary_net}"
-    restart_networking_"${os_vendor}" "${os_version}"
 fi
 
