@@ -38,7 +38,8 @@ function err() {
 
 function ping_gateway() { # 1:gateway_ip
     log "Pinging gateway ${1}."
-    ping -c 1 -t 1 "$1" > /dev/null
+    # Sends requests continuously for 10 seconds. Typically 1 per second.
+    ping -w10 "$1" > /dev/null
 }
 
 
