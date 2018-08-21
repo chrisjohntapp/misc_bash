@@ -52,11 +52,11 @@ dr_gateway='192.168.2.254'
 readonly script_name=$(basename "$0")
 function log() {
     echo "$(date)" "$@"
-    logger -s "$(date)" "$@" 2>> /var/log/dr.log
+    logger -s "$(date)" "$@" 2>> /var/log/"${script_name}".log
 }
 function err() {
     echo "$(date)" "$@" >&2
-    logger -s "$(date)" "$@" 2>> /var/log/dr.log
+    logger -s "$(date)" "$@" 2>> /var/log/"${script_name}".log
 }
 
 
@@ -274,10 +274,16 @@ function update_config() { # 1:os_vendor, 2:os_version, 3:old_prefix,
 #===============================================================================
 
 # Gather info & validate.
-os_vendor=$(grep -E "^ID=" /etc/os-release | cut -d"=" -f2 | sed 's/"//g') || \
-    { log "Failed to identify OS vendor; exiting."; exit 1; }
-os_version=$(grep -E "^VERSION_ID=" /etc/os-release | cut -d"=" -f2 | \
-    sed 's/"//g') || { log "Failed to identify OS version; exiting."; exit 1; }
+if [[ -r /etc/os-release ]]; then
+    os_vendor=$(grep -E "^ID=" /etc/os-release | cut -d"=" -f2 | sed 's/"//g')
+    os_version=$(grep -E "^VERSION_ID=" /etc/os-release | cut -d"=" -f2 | \
+        sed 's/"//g')
+elif [[ $(cat /etc/centos-release) =~ 'CentOS release 6' ]]; then
+    os_vendor='centos'
+    os_version=6
+fi
+
+
 
 case "${os_vendor}" in
     ubuntu)
