@@ -1,19 +1,45 @@
 #!/bin/bash
 
-# Currently updates network config files and /etc/hosts, then restarts
-# networking. If more changes are required (such as fstab, exports etc),
-# additional function can easily be added base on what is already here.
+# Detects when the VM it is running on has been restarted in the DR site and
+# updates network configuration appropriately.
+
+# Has two modes, failover and failback.
+
+# Failover will test connectivity to the primary_gateway and if it succeeds,
+# will do nothing. If connectivity fails, it will change network prefixes in
+# various places, depending on OS/version, to the dr_prefix and will restart
+# networking.
+#
+# Failback will test connectivity to the dr_gateway and if it succeeds, will do
+# nothing. If connectivity fails, it will change these same prefixes to the
+# primary_prefix and restart networking.
+#
+# In production, both should be enabled.
+
+# The script currently changes IP addresses in /etc/hosts and wherever the
+# network interface configuration is located. Other file locations can easily
+# be added should they be required (/etc/fstab for example) by another call to
+# update_file.
 
 # This script does not and should not change resolv.conf, as resolvers in both
-# sites should be configured.
+# sites should be configured there at all times.
 
 # TODO:
 # Split found_old_prefixes test out into a function.
-# Should require more than 1 failed ping to trigger actions.
 
-primary_net='10.51.71'
+
+#===============================================================================
+# Configurables.
+#===============================================================================
+
+# Should script fail over to DR site, fail back to primary site, or both?
+# 1: true, 0: false.
+failover=1
+failback=1
+
+primary_prefix='10.51.71'
 primary_gateway='10.51.71.1'
-dr_net='192.168.2'
+dr_prefix='192.168.2'
 dr_gateway='192.168.2.254'
 
 
@@ -85,8 +111,9 @@ function restart_networking_ubuntu() { # 1:os_version
     log "Restaring networking to apply the new configuration."
     case "$1" in
         12.04)
-            /etc/init.d/networking stop
-            /etc/init.d/networking start
+            # Redirect is to silence misleading suggestions from Ubuntu.
+            /etc/init.d/networking stop >/dev/null
+            /etc/init.d/networking start >/dev/null
             ;;
         14.04)
             # See Ubuntu bug #1301015 for reasoning behind this.
@@ -276,7 +303,8 @@ network."
 else
     log "${primary_gateway} is not reachable. Assuming we're on the DR site. \
 Updating IP address(s) to DR site prefix, if required."
-    update_config "${os_vendor}" "${os_version}" "${primary_net}" "${dr_net}"
+    update_config "${os_vendor}" "${os_version}" "${primary_prefix}" \
+        "${dr_prefix}"
 fi
 
 # Try the DR gateway.
@@ -287,6 +315,7 @@ if [ $? -eq 0 ]; then
 else
     log "${dr_gateway} is not reachable. Assuming we are on the primary \
 network.  Updating IP address(es) to primary site prefix, if required."
-    update_config "${os_vendor}" "${os_version}" "${dr_net}" "${primary_net}"
+    update_config "${os_vendor}" "${os_version}" "${dr_prefix}" \
+        "${primary_prefix}"
 fi
 
