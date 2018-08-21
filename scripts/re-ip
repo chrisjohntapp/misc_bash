@@ -134,20 +134,19 @@ function update_ubuntu_12_14_16_interfaces() { # 1:old_prefix, 2:new_prefix
     # replace all examples with new_prefix.
 
     found_old_prefixes=$(find /etc/network/interfaces \
-        /etc/network/interfaces.d -type f -exec grep "$1" {} \;)
+        /etc/network/interfaces.d -type f -exec grep -l "$1" {} \;)
 
     if [[ -z ${found_old_prefixes} ]]; then
         log "No IP address updates required."
         return 10
     else
-        log "Changing network prefix from $1 to $2 on /etc/network/interfaces."
+        log "Changing network prefixes from $1 to $2 in ${found_old_prefixes}."
+
         sed -i "s/$1/$2/g" /etc/network/interfaces
 
-        log "Collecting network config files."
         ifcfg_files=($(ls /etc/network/interfaces.d/*.cfg))
 
         for ((i=0; i<${#ifcfg_files[@]}; i++)); do
-            log "Changing network from $1 to $2 on ${ifcfg_files[i]}."
             sed -i "s/$1/$2/g" "${ifcfg_files[i]}"
         done
     fi
@@ -159,17 +158,17 @@ function update_ubuntu_18_interfaces() { # 1:old_prefix, 2:new_prefix
     # replace all examples with new_prefix.
 
     found_old_prefixes=$(find /etc/netplan -type f -name '*.yaml' \
-        -exec grep "$1" {} \;)
+        -exec grep -l "$1" {} \;)
 
     if [[ -z ${found_old_prefixes} ]]; then
         log "No IP address updates required."
         return 10
     else
-        log "Collecting network config files."
+        log "Changing network prefixes from $1 to $2 in ${found_old_prefixes}."
+
         ifcfg_files=($(ls /etc/netplan/*.yaml))
 
         for ((i=0; i<${#ifcfg_files[@]}; i++)); do
-            log "Changing network prefix from $1 to $2 on ${ifcfg_files[i]}."
             sed -i "s/$1/$2/g" "${ifcfg_files[i]}"
         done
     fi
@@ -181,17 +180,17 @@ function update_centos_6_7_interfaces() { # 1:old_prefix, 2:new_prefix
     # replace all examples with new_prefix.
 
     found_old_prefixes=$(find /etc/sysconfig/network-scripts -type f \
-        -name 'ifcfg-*' -exec grep "$1" {} \;)
+        -name 'ifcfg-*' -exec grep -l "$1" {} \;)
 
     if [[ -z ${found_old_prefixes} ]]; then
         log "No IP address updates required."
         return 10
     else
-        log "Collecting network config files."
+        log "Changing network prefixes from $1 to $2 in ${found_old_prefixes}."
+
         ifcfg_files=($(ls /etc/sysconfig/network-scripts/ifcfg-*))
 
         for ((i=0; i<${#ifcfg_files[@]}; i++)); do
-            log "Changing network prefix from $1 to $2 on ${ifcfg_files[i]}."
             sed -i "s/$1/$2/g" "${ifcfg_files[i]}"
         done
     fi
