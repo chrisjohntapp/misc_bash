@@ -24,6 +24,8 @@
 # This script does not and should not change resolv.conf, as resolvers in both
 # sites should be configured there at all times.
 
+# Tested on Ubuntu 12.04 - 18.04 and CentOS 6 - 7.
+
 # TODO:
 # Split found_old_prefixes test out into a function.
 
@@ -108,7 +110,7 @@ function restart_networking_ubuntu() { # 1:os_version
 
     # Run scripts to restart networking, applying a new configuration.
 
-    log "Restaring networking to apply the new configuration."
+    log "Restarting networking to apply the new configuration."
     case "$1" in
         12.04)
             # Redirect is to silence misleading suggestions from Ubuntu.
@@ -126,6 +128,8 @@ function restart_networking_ubuntu() { # 1:os_version
             systemctl restart networking.service
             ;;
         18.04)
+            flush_interfaces
+            netplan apply
             systemctl restart systemd-networkd.service
             ;;
         *    )
@@ -163,7 +167,7 @@ function update_ubuntu_12_14_16_interfaces() { # 1:old_prefix, 2:new_prefix
         /etc/network/interfaces.d -type f -exec grep -l "$1" {} \;)
 
     if [[ -z ${found_old_prefixes} ]]; then
-        log "No IP address updates required."
+        log "No IP address updates required to interface config files."
         return 10
     else
         log "Changing network prefixes from $1 to $2 in ${found_old_prefixes}."
@@ -187,7 +191,7 @@ function update_ubuntu_18_interfaces() { # 1:old_prefix, 2:new_prefix
         -exec grep -l "$1" {} \;)
 
     if [[ -z ${found_old_prefixes} ]]; then
-        log "No IP address updates required."
+        log "No IP address updates required to interface config files."
         return 10
     else
         log "Changing network prefixes from $1 to $2 in ${found_old_prefixes}."
@@ -209,7 +213,7 @@ function update_centos_6_7_interfaces() { # 1:old_prefix, 2:new_prefix
         -name 'ifcfg-*' -exec grep -l "$1" {} \;)
 
     if [[ -z ${found_old_prefixes} ]]; then
-        log "No IP address updates required."
+        log "No IP address updates required to interface config files."
         return 10
     else
         log "Changing network prefixes from $1 to $2 in ${found_old_prefixes}."
@@ -299,25 +303,26 @@ if [[ ${failover} == 1 ]]; then
     ping_gateway "${primary_gateway}"
     if [ $? -eq 0 ]; then
         log "${primary_gateway} is reachable. This VM appears to be on primary \
-    network."
+network."
         exit 0
     else
-        log "${primary_gateway} is not reachable. Assuming we're on the DR site. \
-    Updating IP address(s) to DR site prefix, if required."
+        log "${primary_gateway} is not reachable. Assuming we're on the DR \
+site.  Updating IP address(s) to DR site prefix, if required."
         update_config "${os_vendor}" "${os_version}" "${primary_prefix}" \
             "${dr_prefix}"
     fi
 fi
 
+# Try the DR gateway.
 if [[ ${failback} == 1 ]]; then
-    # Try the DR gateway.
     ping_gateway "${dr_gateway}"
     if [ $? -eq 0 ]; then
-        log "${dr_gateway} is reachable. This VM appears to be on the DR network."
+        log "${dr_gateway} is reachable. This VM appears to be on the DR \
+network."
         exit 0
     else
         log "${dr_gateway} is not reachable. Assuming we are on the primary \
-    network.  Updating IP address(es) to primary site prefix, if required."
+network.  Updating IP address(es) to primary site prefix, if required."
         update_config "${os_vendor}" "${os_version}" "${dr_prefix}" \
             "${primary_prefix}"
     fi
