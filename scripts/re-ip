@@ -295,27 +295,30 @@ case "${os_vendor}" in
 esac
 
 # Try the primary gateway.
-ping_gateway "${primary_gateway}"
-if [ $? -eq 0 ]; then
-    log "${primary_gateway} is reachable. This VM appears to be on primary \
-network."
-    exit 0
-else
-    log "${primary_gateway} is not reachable. Assuming we're on the DR site. \
-Updating IP address(s) to DR site prefix, if required."
-    update_config "${os_vendor}" "${os_version}" "${primary_prefix}" \
-        "${dr_prefix}"
+if [[ ${failover} == 1 ]]; then
+    ping_gateway "${primary_gateway}"
+    if [ $? -eq 0 ]; then
+        log "${primary_gateway} is reachable. This VM appears to be on primary \
+    network."
+        exit 0
+    else
+        log "${primary_gateway} is not reachable. Assuming we're on the DR site. \
+    Updating IP address(s) to DR site prefix, if required."
+        update_config "${os_vendor}" "${os_version}" "${primary_prefix}" \
+            "${dr_prefix}"
+    fi
 fi
 
-# Try the DR gateway.
-ping_gateway "${dr_gateway}"
-if [ $? -eq 0 ]; then
-    log "${dr_gateway} is reachable. This VM appears to be on the DR network."
-    exit 0
-else
-    log "${dr_gateway} is not reachable. Assuming we are on the primary \
-network.  Updating IP address(es) to primary site prefix, if required."
-    update_config "${os_vendor}" "${os_version}" "${dr_prefix}" \
-        "${primary_prefix}"
+if [[ ${failback} == 1 ]]; then
+    # Try the DR gateway.
+    ping_gateway "${dr_gateway}"
+    if [ $? -eq 0 ]; then
+        log "${dr_gateway} is reachable. This VM appears to be on the DR network."
+        exit 0
+    else
+        log "${dr_gateway} is not reachable. Assuming we are on the primary \
+    network.  Updating IP address(es) to primary site prefix, if required."
+        update_config "${os_vendor}" "${os_version}" "${dr_prefix}" \
+            "${primary_prefix}"
+    fi
 fi
-
