@@ -11,8 +11,8 @@
 # Split found_old_prefixes test out into a function.
 # Should require more than 1 failed ping to trigger actions.
 
-primary_net='10.110.73'
-primary_gateway='10.110.73.1'
+primary_net='10.51.71'
+primary_gateway='10.51.71.1'
 dr_net='192.168.2'
 dr_gateway='192.168.2.254'
 
@@ -38,8 +38,8 @@ function err() {
 
 function ping_gateway() { # 1:gateway_ip
     log "Pinging gateway ${1}."
-    # Sends requests continuously for 10 seconds. Typically 1 per second.
-    ping -w10 "$1" > /dev/null
+    quests continuously for 10 seconds. Typically 1 per second.
+    ping -c10 -w1 "$1" > /dev/null
 }
 
 
