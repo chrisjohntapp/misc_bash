@@ -24,7 +24,9 @@
 # This script does not and should not change resolv.conf, as resolvers in both
 # sites should be configured there at all times.
 
-# Tested on Ubuntu 12.04 - 18.04 and CentOS 6 - 7.
+# Tested on:
+# Ubuntu 12.04 -> 18.04 (LTS only).
+# CentOS 6 -> 7.
 
 # TODO:
 # Split found_old_prefixes test out into a function.
@@ -65,6 +67,9 @@ function err() {
 #===============================================================================
 
 function ping_gateway() { # 1:gateway_ip
+    #
+    # Ping 10 times and return result.
+    #
     log "Pinging gateway ${1}."
     ping -c10 "$1" > /dev/null
 }
@@ -75,9 +80,9 @@ function ping_gateway() { # 1:gateway_ip
 #===============================================================================
 
 function flush_interfaces() { # None
-
+    #
     # Remove all IP addresses from all network interfaces, except loopback.
-
+    #
     interfaces="$(basename -a /sys/class/net/*)"
     for i in ${interfaces}; do
         if [[ $i != 'lo' ]]; then
@@ -88,9 +93,9 @@ function flush_interfaces() { # None
 }
 
 function restart_networking_centos() { # 1:os_version
-
+    #
     # Run scripts to restart networking, applying a new configuration.
-
+    #
     log "Restarting networking to apply the new configuration."
     case "$1" in
         6)
@@ -107,9 +112,9 @@ function restart_networking_centos() { # 1:os_version
 }
 
 function restart_networking_ubuntu() { # 1:os_version
-
+    #
     # Run scripts to restart networking, applying a new configuration.
-
+    #
     log "Restarting networking to apply the new configuration."
     case "$1" in
         12.04)
@@ -128,6 +133,7 @@ function restart_networking_ubuntu() { # 1:os_version
             systemctl restart networking.service
             ;;
         18.04)
+            # Flush is required again, because Ubuntu.
             flush_interfaces
             netplan apply
             systemctl restart systemd-networkd.service
@@ -145,10 +151,10 @@ function restart_networking_ubuntu() { # 1:os_version
 #===============================================================================
 
 function update_file() { # 1:file, 2:old_prefix, 3:new_prefix
-
+    #
     # Check for old_prefix in file, and if found change all examples for
     # new_prefix.
-
+    #
     if ! [[ $(cat "$1") =~ $2 ]]; then
         log "No IP address updates required to $1."
         return
@@ -159,10 +165,10 @@ function update_file() { # 1:file, 2:old_prefix, 3:new_prefix
 }
 
 function update_ubuntu_12_14_16_interfaces() { # 1:old_prefix, 2:new_prefix
-
+    #
     # Check for old_prefix in network interface config files and if found
     # replace all examples with new_prefix.
-
+    #
     found_old_prefixes=$(find /etc/network/interfaces \
         /etc/network/interfaces.d -type f -exec grep -l "$1" {} \;)
 
@@ -183,10 +189,10 @@ function update_ubuntu_12_14_16_interfaces() { # 1:old_prefix, 2:new_prefix
 }
 
 function update_ubuntu_18_interfaces() { # 1:old_prefix, 2:new_prefix
-
+    #
     # Check for old_prefix in network interface config files and if found
     # replace all examples with new_prefix.
-
+    #
     found_old_prefixes=$(find /etc/netplan -type f -name '*.yaml' \
         -exec grep -l "$1" {} \;)
 
@@ -205,10 +211,10 @@ function update_ubuntu_18_interfaces() { # 1:old_prefix, 2:new_prefix
 }
 
 function update_centos_6_7_interfaces() { # 1:old_prefix, 2:new_prefix
-
+    #
     # Check for old_prefix in network interface config files and if found
     # replace all examples with new_prefix.
-
+    #
     found_old_prefixes=$(find /etc/sysconfig/network-scripts -type f \
         -name 'ifcfg-*' -exec grep -l "$1" {} \;)
 
@@ -228,13 +234,13 @@ function update_centos_6_7_interfaces() { # 1:old_prefix, 2:new_prefix
 
 function update_config() { # 1:os_vendor, 2:os_version, 3:old_prefix,
                            # 4:new_prefix}
-
+    #
     # Checks OS vendor and version and calls appropriate function to update
     # network config file(s). If changes are made by that function it then
     # calls a function to restart the host networking.
     # Then it calls functions to update any additional files which may contain
     # IP addresses (/etc/hosts for example).
-
+    #
     if [[ "$1" == "ubuntu" ]]; then
         case "$2" in
             1[246].04)
@@ -273,7 +279,9 @@ function update_config() { # 1:os_vendor, 2:os_version, 3:old_prefix,
 # Main.
 #===============================================================================
 
+#
 # Gather info & validate.
+#
 if [[ -r /etc/os-release ]]; then
     os_vendor=$(grep -E "^ID=" /etc/os-release | cut -d"=" -f2 | sed 's/"//g')
     os_version=$(grep -E "^VERSION_ID=" /etc/os-release | cut -d"=" -f2 | \
@@ -282,8 +290,6 @@ elif [[ $(cat /etc/centos-release) =~ 'CentOS release 6' ]]; then
     os_vendor='centos'
     os_version=6
 fi
-
-
 
 case "${os_vendor}" in
     ubuntu)
@@ -304,7 +310,9 @@ case "${os_vendor}" in
         ;;
 esac
 
+#
 # Try the primary gateway.
+#
 if [[ ${failover} == 1 ]]; then
     ping_gateway "${primary_gateway}"
     if [ $? -eq 0 ]; then
@@ -319,7 +327,9 @@ site.  Updating IP address(s) to DR site prefix, if required."
     fi
 fi
 
+#
 # Try the DR gateway.
+#
 if [[ ${failback} == 1 ]]; then
     ping_gateway "${dr_gateway}"
     if [ $? -eq 0 ]; then
