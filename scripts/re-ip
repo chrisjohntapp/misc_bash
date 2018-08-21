@@ -38,7 +38,7 @@ function err() {
 
 function ping_gateway() { # 1:gateway_ip
     log "Pinging gateway ${1}."
-    ping -c10 -w1 "$1" > /dev/null
+    ping -c10 "$1" > /dev/null
 }
 
 
@@ -119,7 +119,7 @@ function update_file() { # 1:file, 2:old_prefix, 3:new_prefix
     # new_prefix.
 
     if ! [[ $(cat "$1") =~ $2 ]]; then
-        log "No IP address updates required."
+        log "No IP address updates required to $1."
         return
     else
         log "Changing network prefix from $2 to $3 on all IP addresses in $1."
@@ -285,8 +285,8 @@ if [ $? -eq 0 ]; then
     log "${dr_gateway} is reachable. This VM appears to be on the DR network."
     exit 0
 else
-    log "${dr_gateway} is not reachable. Assuming we are on primary network. \
-Updating IP address(es) to primary site prefix, if required."
+    log "${dr_gateway} is not reachable. Assuming we are on the primary \
+network.  Updating IP address(es) to primary site prefix, if required."
     update_config "${os_vendor}" "${os_version}" "${dr_net}" "${primary_net}"
 fi
 
