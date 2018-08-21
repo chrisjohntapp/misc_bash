@@ -272,11 +272,11 @@ esac
 ping_gateway "${primary_gateway}"
 if [ $? -eq 0 ]; then
     log "${primary_gateway} is reachable. This VM appears to be on primary \
-    network."
+network."
     exit 0
 else
     log "${primary_gateway} is not reachable. Assuming we're on the DR site. \
-    Updating IP address(s) to DR site prefix, if required."
+Updating IP address(s) to DR site prefix, if required."
     update_config "${os_vendor}" "${os_version}" "${primary_net}" "${dr_net}"
 fi
 
@@ -287,7 +287,7 @@ if [ $? -eq 0 ]; then
     exit 0
 else
     log "${dr_gateway} is not reachable. Assuming we are on primary network. \
-    Updating IP address(es) to primary site prefix, if required."
+Updating IP address(es) to primary site prefix, if required."
     update_config "${os_vendor}" "${os_version}" "${dr_net}" "${primary_net}"
 fi
 
