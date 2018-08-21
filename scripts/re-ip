@@ -38,7 +38,6 @@ function err() {
 
 function ping_gateway() { # 1:gateway_ip
     log "Pinging gateway ${1}."
-    quests continuously for 10 seconds. Typically 1 per second.
     ping -c10 -w1 "$1" > /dev/null
 }
 
