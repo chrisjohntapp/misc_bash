@@ -1,32 +1,30 @@
 #!/bin/bash
 
+# To be run from cron, every 5 minutes or so.
 # Detects when the VM it is running on has been restarted in the DR site and
 # updates network configuration appropriately.
 
-# Has two modes, failover and failback.
-
-# Failover will test connectivity to the primary_gateway and if it succeeds,
-# will do nothing. If connectivity fails, it will change network prefixes in
-# various places, depending on OS/version, to the dr_prefix and will restart
+# Has two modes, failover and failback. Failover will test connectivity to the
+# primary_gateway and if it succeeds, will do nothing. If connectivity fails,
+# it will change network prefixes in various places, depending on OS/version,
+# to the dr_prefix and will restart networking. Failback will test connectivity
+# to the dr_gateway and if it succeeds, will do nothing. If connectivity fails,
+# it will change these same prefixes to the primary_prefix and restart
 # networking.
-#
-# Failback will test connectivity to the dr_gateway and if it succeeds, will do
-# nothing. If connectivity fails, it will change these same prefixes to the
-# primary_prefix and restart networking.
 #
 # In production, both should be enabled.
 
 # The script currently changes IP addresses in /etc/hosts and wherever the
-# network interface configuration is located. Other file locations can easily
-# be added should they be required (/etc/fstab for example) by another call to
-# update_file.
+# network interface configuration file(s) is/are located. Other file locations
+# can easily be added should they be required (/etc/fstab for example) by
+# another call to update_file.
 
 # This script does not and should not change resolv.conf, as resolvers in both
 # sites should be configured there at all times.
 
 # Tested on:
-# Ubuntu 12.04 -> 18.04 (LTS only).
-# CentOS 6 -> 7.
+# Ubuntu 12.04, 14.04, 16.04, 18.04.
+# CentOS 6, 7.
 
 # TODO:
 # Split found_old_prefixes test out into a function.
@@ -41,10 +39,10 @@
 failover=1
 failback=1
 
-primary_prefix='10.51.71'
-primary_gateway='10.51.71.1'
-dr_prefix='192.168.2'
-dr_gateway='192.168.2.254'
+primary_prefix='10.16.11'
+primary_gateway='10.16.11.1'
+dr_prefix='10.12.11'
+dr_gateway='10.12.11.1'
 
 
 #===============================================================================
@@ -321,7 +319,7 @@ network."
         exit 0
     else
         log "${primary_gateway} is not reachable. Assuming we're on the DR \
-site.  Updating IP address(s) to DR site prefix, if required."
+site.  Updating IP address(es) to DR site prefix, if required."
         update_config "${os_vendor}" "${os_version}" "${primary_prefix}" \
             "${dr_prefix}"
     fi
@@ -338,7 +336,7 @@ network."
         exit 0
     else
         log "${dr_gateway} is not reachable. Assuming we are on the primary \
-network.  Updating IP address(es) to primary site prefix, if required."
+site.  Updating IP address(es) to primary site prefix, if required."
         update_config "${os_vendor}" "${os_version}" "${dr_prefix}" \
             "${primary_prefix}"
     fi

@@ -11,3 +11,5 @@ getconfig()
 echo -en "Getting system details..."
 getconfig > /tmp/pci.csv
 echo "Done."
+
+# EOF
