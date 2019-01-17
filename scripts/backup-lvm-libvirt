@@ -1,0 +1,56 @@
+#!/bin/bash
+
+# Backup Libvirt guests using LVM snapshots.
+
+vm_name="$1"
+
+# Functions.
+get_lvm_size() {
+    lvs --units g -o lv_name,seg_size --select "lv_name =~ ${1}" | sed '1,d' | awk '{print $2}' | tr -d 'g'
+}
+
+get_disk_paths() {
+    disk_paths=()
+    while read -r -d ''; do
+        disk_paths+=("${REPLY}")
+    done < <(virsh domblklist --details testbox | grep -v 'cdrom'| sed '1,2d' | sed '$,1d' | awk '{print $4}')
+}
+
+
+#==============================================================================
+
+
+
+# Main.
+
+
+
+# Get sizes of disks
+declare -A lvm_sizes
+
+for disk in ${disk_names}; do
+    lvm_sizes[${disk}]=$(get_lvm_size)
+done
+
+# Print results (debug).
+for lvm in ${!lvm_sizes[@]}; do
+    printf "Volume %s is %s GB.\n" "${lvm}" "${lvm_sizes[${lvm}]}"
+done
+
+
+
+
+
+
+
+# Create lvms for the snapshots
+#lvcreate -L100G -s -n win2k8dc2.bak /dev/vg0/win2k8dc
+#lvcreate -L600G -s -n win2k8dc2-1.bak /dev/vg0/win2k8dc-1
+#
+## Use dd or tar to copy to network filesystem or local storage
+#dd if=/dev/vg0/win2k8dc.bak of=/nfs2/win2k8dc-backups/win2k8dc-2019/win2k8dc.img
+#dd if=/dev/vg0/win2k8dc-1.bak of=/nfs2/win2k8dc-backups/win2k8dc-2019/win2k8dc-1.img
+#
+#Delete the LVM snapshot
+#lvremove /dev/vg0/win2k8dc.bak
+#lvremove /dev/vg0/win2k8dc-1.bak
