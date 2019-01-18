@@ -1,56 +1,99 @@
 #!/bin/bash
 
+#
 # Backup Libvirt guests using LVM snapshots.
+#
 
-vm_name="$1"
+#
+# Settings.
+#
 
+backup_target="/mnt/backups"
+
+#
 # Functions.
-get_lvm_size() {
-    lvs --units g -o lv_name,seg_size --select "lv_name =~ ${1}" | sed '1,d' | awk '{print $2}' | tr -d 'g'
+#
+
+function check_space_available() { # 1:lv_size
+    #
+    # Returns code 0 if space is available, or 1 if not.
+    #
+    target_space_available=$(df --sync -BG "${backup_target}" | sed '1d' \
+    | awk '{print $2}' | tr -d 'G')
+    if [[ "${target_space_available}" -lt "$1"]]; then
+        return 0
+    else
+        return 1
+    fi
 }
 
-get_disk_paths() {
-    disk_paths=()
-    while read -r -d ''; do
-        disk_paths+=("${REPLY}")
-    done < <(virsh domblklist --details testbox | grep -v 'cdrom'| sed '1,2d' | sed '$,1d' | awk '{print $4}')
+function get_lv_paths() { # 1:vm_name
+    #
+    # Returns array of lv absolute paths associated with vm_name (except
+    # devices listed in exclusions).
+    #
+    # TODO: set exclusions via optional argument.
+    #
+    local exclusions='cdrom'
+    local string_paths=$(virsh domblklist --details "$1" | grep -Ev \
+    "${exclusions}" | sed '1,2d' | sed '$,1d' | awk '{print $4}')
+    local array_paths=( "${string_paths}" )
 }
 
+function get_lv_size() { # 1:lv_path
+    #
+    # Return the size in GB of lv_path.
+    #
+    local size="$(lvs --noheadings --units g -o lv_name,seg_size "$1" | awk \
+    '{print $2}' | tr -d 'g')"
+}
 
-#==============================================================================
+function get_vg_name() { # 1:lv_path
+    #
+    # Return the name of vg from lv_path.
+    #
+    local name="$(lvs --noheadings -o vg_name ${lv_path})"
+}
 
-
-
+#
 # Main.
+#
 
+[[ $# = 1 ]] || { echo "$(basename $0) vm_name"; exit 1; }
 
+# Get abs paths of all lvs associated with vm_name.
+paths=$(get_lv_paths $0)
 
-# Get sizes of disks
-declare -A lvm_sizes
+# Create hash of lv paths + sizes in GB.
+declare -A lv_sizes
 
-for disk in ${disk_names}; do
-    lvm_sizes[${disk}]=$(get_lvm_size)
+for path in ${paths}; do
+    lv_sizes[${path}]=$(get_lv_size ${path})
 done
 
 # Print results (debug).
-for lvm in ${!lvm_sizes[@]}; do
-    printf "Volume %s is %s GB.\n" "${lvm}" "${lvm_sizes[${lvm}]}"
+for lv in ${!lv_sizes[@]}; do
+    printf "Volume %s is %s GB.\n" "${lv}" "${lv_sizes[${lv}]}"
 done
 
+# Create snapshot for each LV.
+snapshots=()
+for lv in ${!lv_sizes[@]}; do
+    check_space_available "${lv_sizes[${lv}]}" || { printf "Not enough space \
+    available on %s to backup %s. Exiting.\n" "${backup_target}" "${lv}"}
 
+    vg_name=$(get_vg_name ${lv})
+    lvcreate -L"${lv_sizes[${lv}]}" -s -n "${path#\/dev\/${vg_name}\/}.snap" \
+    "${lv}"
+    snapshots+=("${path#\/dev\/${vg_name}\/}.snap")
+done
 
+# Use dd to copy snapshot to target filesystem.
+for snap in ${snapshots[@]}; do
+    dd if="${snap}" of="${backup_target}/${snap}.$(date +%Y-%m-%d-%H%M).img"
+done
 
-
-
-
-# Create lvms for the snapshots
-#lvcreate -L100G -s -n win2k8dc2.bak /dev/vg0/win2k8dc
-#lvcreate -L600G -s -n win2k8dc2-1.bak /dev/vg0/win2k8dc-1
-#
-## Use dd or tar to copy to network filesystem or local storage
-#dd if=/dev/vg0/win2k8dc.bak of=/nfs2/win2k8dc-backups/win2k8dc-2019/win2k8dc.img
-#dd if=/dev/vg0/win2k8dc-1.bak of=/nfs2/win2k8dc-backups/win2k8dc-2019/win2k8dc-1.img
-#
-#Delete the LVM snapshot
-#lvremove /dev/vg0/win2k8dc.bak
-#lvremove /dev/vg0/win2k8dc-1.bak
+# Delete snapshots.
+for snap in ${snapshots[@]}; do
+    lvremove "${snap}"
+done
