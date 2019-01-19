@@ -20,7 +20,7 @@ function check_space_available() { # 1:lv_size
     #
     target_space_available=$(df --sync -BG "${backup_target}" | sed '1d' \
     | awk '{print $2}' | tr -d 'G')
-    if [[ "${target_space_available}" -lt "$1"]]; then
+    if [[ "${target_space_available}" -lt "$1" ]]; then
         return 0
     else
         return 1
@@ -80,7 +80,7 @@ done
 snapshots=()
 for lv in ${!lv_sizes[@]}; do
     check_space_available "${lv_sizes[${lv}]}" || { printf "Not enough space \
-    available on %s to backup %s. Exiting.\n" "${backup_target}" "${lv}"}
+    available on %s to backup %s. Exiting.\n" "${backup_target}" "${lv}"; exit 1; }
 
     vg_name=$(get_vg_name ${lv})
     lvcreate -L"${lv_sizes[${lv}]}" -s -n "${path#\/dev\/${vg_name}\/}.snap" \
