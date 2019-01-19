@@ -1,38 +1,48 @@
 #!/bin/bash
 
-# To be run from cron, every 5 minutes or so.
-# Detects when the VM it is running on has been restarted in the DR site and
-# updates network configuration appropriately.
-
-# Has two modes, failover and failback. Failover will test connectivity to the
-# primary_gateway and if it succeeds, will do nothing. If connectivity fails,
-# it will change network prefixes in various places, depending on OS/version,
-# to the dr_prefix and will restart networking. Failback will test connectivity
-# to the dr_gateway and if it succeeds, will do nothing. If connectivity fails,
-# it will change these same prefixes to the primary_prefix and restart
-# networking.
 #
-# In production, both should be enabled.
-
+# Re-IP.
+#
+# Detects when the VM it is run on has been restarted in the DR site and
+# updates network configurations appropriately.
+#
+# Should be run from cron, every 5 minutes or so.
+#
+# Has two modes, failover and failback. In production, both should be enabled.
+#
+# Failover will test connectivity to the primary_gateway and if it succeeds,
+# will exit, doing nothing. If connectivity fails however, it will change
+# network prefixes in various places, depending on OS/version, to the dr_prefix
+# and will restart networking.
+#
+# Failback will test connectivity to the dr_gateway and if it succeeds, will
+# exit, doing nothing. If connectivity fails however, it will change these same
+# prefixes to the primary_prefix and restart networking.
+#
+# Enabling both failover and failback will ensure that in the event of a false
+# positive failover, the script will effect automatic recovery.
+#
 # The script currently changes IP addresses in /etc/hosts and wherever the
 # network interface configuration file(s) is/are located. Other file locations
 # can easily be added should they be required (/etc/fstab for example) by
-# another call to update_file.
-
-# This script does not and should not change resolv.conf, as resolvers in both
-# sites should be configured there at all times.
-
+# another call to the update_file function.
+#
+# This script does not and should not be configured to update resolv.conf, as
+# resolvers in both sites should be configured on all hosts at all times.
+#
 # Tested on:
-# Ubuntu 12.04, 14.04, 16.04, 18.04.
-# CentOS 6, 7.
-
+#   Ubuntu 12.04, 14.04, 16.04, 18.04.
+#   CentOS 6, 7.
+#
 # TODO:
-# Split found_old_prefixes test out into a function.
+#   Split old_prefix_files test out into a function.
+#   Add --journald support to logger, for such systems (autodetect).
+#   Use descriptive names for return codes (eg 10. = "NOOP").
 
 
-#===============================================================================
-# Configurables.
-#===============================================================================
+# ==============================================================================
+# Settings.
+# ==============================================================================
 
 # Should script fail over to DR site, fail back to primary site, or both?
 # 1: true, 0: false.
@@ -41,41 +51,22 @@ failback=1
 
 primary_prefix='10.16.11'
 primary_gateway='10.16.11.1'
+
 dr_prefix='10.12.11'
 dr_gateway='10.12.11.1'
 
 
-#===============================================================================
-# Setup Logging.
-#===============================================================================
-
-readonly script_name=$(basename "$0")
-function log() {
-    echo "$(date)" "$@"
-    logger -s "$(date)" "$@" 2>> /var/log/"${script_name}".log
-}
-function err() {
-    echo "$(date)" "$@" >&2
-    logger -s "$(date)" "$@" 2>> /var/log/"${script_name}".log
-}
-
-
-#===============================================================================
-# Check Location.
-#===============================================================================
+# ==============================================================================
+# Functions.
+# ==============================================================================
 
 function ping_gateway() { # 1:gateway_ip
     #
     # Ping 10 times and return result.
     #
-    log "Pinging gateway ${1}."
+    logger -p user.info "${script_name}: Pinging gateway $1."
     ping -c10 "$1" > /dev/null
 }
-
-
-#===============================================================================
-# Restart Networking.
-#===============================================================================
 
 function flush_interfaces() { # None
     #
@@ -84,7 +75,7 @@ function flush_interfaces() { # None
     interfaces="$(basename -a /sys/class/net/*)"
     for i in ${interfaces}; do
         if [[ $i != 'lo' ]]; then
-            log "Flushing config on $i."
+            logger -p user.notice "${script_name}: Flushing config on $i."
             ip addr flush "$i"
         fi
     done
@@ -94,7 +85,7 @@ function restart_networking_centos() { # 1:os_version
     #
     # Run scripts to restart networking, applying a new configuration.
     #
-    log "Restarting networking to apply the new configuration."
+    logger -p user.notice "${script_name}: Restarting networking."
     case "$1" in
         6)
             service network restart
@@ -103,7 +94,7 @@ function restart_networking_centos() { # 1:os_version
             systemctl restart network.service
             ;;
         *) 
-            log "CentOS version not supported."
+            logger -p user.crit "${script_name}: CentOS version not supported."
             exit 1
             ;;
     esac
@@ -112,8 +103,9 @@ function restart_networking_centos() { # 1:os_version
 function restart_networking_ubuntu() { # 1:os_version
     #
     # Run scripts to restart networking, applying a new configuration.
+    # Also functions as a list of reasons why not to use Ubuntu at work.
     #
-    log "Restarting networking to apply the new configuration."
+    logger -p user.notice "${script_name}: Restarting networking."
     case "$1" in
         12.04)
             # Redirect is to silence misleading suggestions from Ubuntu.
@@ -131,22 +123,18 @@ function restart_networking_ubuntu() { # 1:os_version
             systemctl restart networking.service
             ;;
         18.04)
-            # Flush is required again, because Ubuntu.
+            # Flush is required again.
             flush_interfaces
             netplan apply
             systemctl restart systemd-networkd.service
             ;;
         *    )
-            log "Ubuntu version not recognised."
+            logger -p user.crit "${script_name}: Ubuntu version not \
+recognised."
             exit 1
             ;;
     esac
 }
-
-
-#===============================================================================
-# Update IP address(es).
-#===============================================================================
 
 function update_file() { # 1:file, 2:old_prefix, 3:new_prefix
     #
@@ -154,10 +142,12 @@ function update_file() { # 1:file, 2:old_prefix, 3:new_prefix
     # new_prefix.
     #
     if ! [[ $(cat "$1") =~ $2 ]]; then
-        log "No IP address updates required to $1."
+        logger -p user.info "${script_name}: No IP address updates required to \
+$1."
         return
     else
-        log "Changing network prefix from $2 to $3 on all IP addresses in $1."
+        logger -p user.notice "${script_name}: Changing network prefix from $2 \
+to $3 on all IP addresses in $1."
         sed -i "s/$2/$3/g" "$1"
     fi
 }
@@ -167,23 +157,24 @@ function update_ubuntu_12_14_16_interfaces() { # 1:old_prefix, 2:new_prefix
     # Check for old_prefix in network interface config files and if found
     # replace all examples with new_prefix.
     #
-    found_old_prefixes=$(find /etc/network/interfaces \
-        /etc/network/interfaces.d -type f -exec grep -l "$1" {} \;)
+    old_prefix_files=$(find /etc/network/interfaces \
+    /etc/network/interfaces.d -type f -exec grep -l "$1" {} \;)
 
-    if [[ -z ${found_old_prefixes} ]]; then
-        log "No IP address updates required to interface config files."
+    if [[ -z ${old_prefix_files} ]]; then
+        logger -p user.info "${script_name}: No IP address updates required to \
+interface config files."
         return 10
     else
-        log "Changing network prefixes from $1 to $2 in ${found_old_prefixes}."
-
+        logger -p user.notice "${script_name}: Changing network prefixes from \
+$1 to $2 in ${old_prefix_files}."
         sed -i "s/$1/$2/g" /etc/network/interfaces
 
-        ifcfg_files=($(ls /etc/network/interfaces.d/*.cfg))
-
+        mapfile -t ifcfg_files < <(ls /etc/network/interfaces.d/*.cfg)
         for ((i=0; i<${#ifcfg_files[@]}; i++)); do
             sed -i "s/$1/$2/g" "${ifcfg_files[i]}"
         done
     fi
+
 }
 
 function update_ubuntu_18_interfaces() { # 1:old_prefix, 2:new_prefix
@@ -191,17 +182,18 @@ function update_ubuntu_18_interfaces() { # 1:old_prefix, 2:new_prefix
     # Check for old_prefix in network interface config files and if found
     # replace all examples with new_prefix.
     #
-    found_old_prefixes=$(find /etc/netplan -type f -name '*.yaml' \
-        -exec grep -l "$1" {} \;)
+    old_prefix_files=$(find /etc/netplan -type f -name '*.yaml' \
+    -exec grep -l "$1" {} \;)
 
-    if [[ -z ${found_old_prefixes} ]]; then
-        log "No IP address updates required to interface config files."
+    if [[ -z ${old_prefix_files} ]]; then
+        logger -p user.info "${script_name}: No IP address updates required to \
+interface config files."
         return 10
     else
-        log "Changing network prefixes from $1 to $2 in ${found_old_prefixes}."
+        logger -p user.notice "${script_name}: Changing network prefixes from \
+$1 to $2 in ${old_prefix_files}."
 
-        ifcfg_files=($(ls /etc/netplan/*.yaml))
-
+        mapfile -t ifcfg_files < <(ls /etc/netplan/*.yaml)
         for ((i=0; i<${#ifcfg_files[@]}; i++)); do
             sed -i "s/$1/$2/g" "${ifcfg_files[i]}"
         done
@@ -213,17 +205,18 @@ function update_centos_6_7_interfaces() { # 1:old_prefix, 2:new_prefix
     # Check for old_prefix in network interface config files and if found
     # replace all examples with new_prefix.
     #
-    found_old_prefixes=$(find /etc/sysconfig/network-scripts -type f \
-        -name 'ifcfg-*' -exec grep -l "$1" {} \;)
+    old_prefix_files=$(find /etc/sysconfig/network-scripts -type f \
+    -name 'ifcfg-*' -exec grep -l "$1" {} \;)
 
-    if [[ -z ${found_old_prefixes} ]]; then
-        log "No IP address updates required to interface config files."
+    if [[ -z ${old_prefix_files} ]]; then
+        logger -p user.info "${script_name}: No IP address updates required to \
+interface config files."
         return 10
     else
-        log "Changing network prefixes from $1 to $2 in ${found_old_prefixes}."
+        logger -p user.notice "${script_name}: Changing network prefixes from \
+$1 to $2 in ${old_prefix_files}."
 
-        ifcfg_files=($(ls /etc/sysconfig/network-scripts/ifcfg-*))
-
+        mapfile -t ifcfg_files < <(ls /etc/sysconfig/network-scripts/ifcfg-*)
         for ((i=0; i<${#ifcfg_files[@]}; i++)); do
             sed -i "s/$1/$2/g" "${ifcfg_files[i]}"
         done
@@ -244,28 +237,37 @@ function update_config() { # 1:os_vendor, 2:os_version, 3:old_prefix,
             1[246].04)
                 update_ubuntu_12_14_16_interfaces "$3" "$4"
                 [[ $? -ne 10 ]] && restart_networking_"$1" "$2"
+
                 update_file /etc/hosts "$3" "$4"
-                # update_file /etc/foobar "$3" "$4"
+                # Any additional files to be updated (such as /etc/fstab)
+                # should be added here. eg:
+                # update_file /etc/fstab "$3" "$4"
+
                 ;;
             18.04    )
                 update_ubuntu_18_interfaces "$3" "$4"
                 [[ $? -ne 10 ]] && restart_networking_"$1" "$2"
+
                 update_file /etc/hosts "$3" "$4"
+
                 ;;
             *        )
-                log "Ubuntu version not supported."
+                logger -p user.crit "${script_name}: Ubuntu version not supported."
                 exit 1
                 ;;
         esac
+
     elif [[ "$1" == "centos" ]]; then
         case "$2" in
             [67])
                 update_centos_6_7_interfaces "$3" "$4"
                 [[ $? -ne 10 ]] && restart_networking_"$1" "$2"
+
                 update_file /etc/hosts "$3" "$4"
+
                 ;;
             *   )
-                log "CentOS version not supported."
+                logger -p user.crit "${script_name}: CentOS version not supported."
                 exit 1
                 ;;
         esac
@@ -292,52 +294,61 @@ fi
 case "${os_vendor}" in
     ubuntu)
         if ! [[ "${os_version}" =~ 1[2468].04 ]]; then
-            log "Ubuntu OS version not supported."
+            logger -p user.crit "${script_name}: Ubuntu OS version not \
+supported."
             exit 1
         fi
         ;;
     centos)
         if ! [[ "${os_version}" =~ [67] ]]; then
-            log "CentOS version not supported."
+            logger -p user.crit "${script_name}: CentOS version not \
+supported."
             exit 1
         fi
         ;;
     *     )
-        log "OS not supported."
+        logger -p user.crit "${script_name}: OS not supported."
         exit 1
         ;;
 esac
 
-#
+
+# =====================================
+# Setup global vars.
+# =====================================
+script_name=$(basename "$0")
+
+
+# =====================================
 # Try the primary gateway.
-#
+# =====================================
 if [[ ${failover} == 1 ]]; then
-    ping_gateway "${primary_gateway}"
-    if [ $? -eq 0 ]; then
-        log "${primary_gateway} is reachable. This VM appears to be on primary \
-network."
+    if ping_gateway "${primary_gateway}"; then
+        logger -p user.info "${script_name}: ${primary_gateway} is reachable. \
+This VM appears to be on primary network."
         exit 0
     else
-        log "${primary_gateway} is not reachable. Assuming we're on the DR \
-site.  Updating IP address(es) to DR site prefix, if required."
+        logger -p user.notice "${script_name}: ${primary_gateway} is not \
+reachable. Assuming we're on the DR site. Updating IP address(es) to DR site \
+prefix, if required."
         update_config "${os_vendor}" "${os_version}" "${primary_prefix}" \
-            "${dr_prefix}"
+        "${dr_prefix}"
     fi
 fi
 
-#
+# =====================================
 # Try the DR gateway.
-#
+# =====================================
 if [[ ${failback} == 1 ]]; then
-    ping_gateway "${dr_gateway}"
-    if [ $? -eq 0 ]; then
-        log "${dr_gateway} is reachable. This VM appears to be on the DR \
-network."
+    if ping_gateway "${dr_gateway}"; then
+        logger -p user.info "${script_name}: ${dr_gateway} is reachable. This \
+VM appears to be on the DR network."
         exit 0
     else
-        log "${dr_gateway} is not reachable. Assuming we are on the primary \
-site.  Updating IP address(es) to primary site prefix, if required."
+        logger -p user.notice "${script_name}: ${dr_gateway} is not \
+reachable. Assuming we are on the primary site. Updating IP address(es) to \
+primary site prefix, if required."
         update_config "${os_vendor}" "${os_version}" "${dr_prefix}" \
-            "${primary_prefix}"
+        "${primary_prefix}"
     fi
 fi
