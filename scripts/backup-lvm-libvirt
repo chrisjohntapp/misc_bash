@@ -8,7 +8,7 @@
 # Settings.
 #
 
-backup_target="/mnt/backups"
+backup_target="/green/backup"
 
 #
 # Functions.
@@ -22,8 +22,8 @@ function check_space_available() { # 1:lv_size
 
     target_space_available=$(df --sync -BG "${backup_target}" | sed '1d' \
     | awk '{print $2}' | tr -d 'G')
-    logger -p user.debug "${script_name}: lv_size: $1."
-    logger -p user.debug "${script_name}: target_space_available: ${target_space_available}."
+    logger -p user.debug "${script_name}: lv_size: ${1}G."
+    logger -p user.debug "${script_name}: target_space_available: ${target_space_available}G."
 
     if [[ "${target_space_available}" -lt "$1" ]]; then
         logger -p user.info "${script_name}: Not enough space available on \
@@ -45,7 +45,6 @@ function get_lv_size() { # 1:lv_path
     if size="$(lvs --noheadings --units g -o lv_name,seg_size "$1" | awk \
     '{print $2}' | tr -d 'g')"; then
         intsize=${size%.*}
-        logger -p user.debug "${script_name}: intsize: ${intsize}."
         printf "%s" "${intsize}"
     else
         logger -p user.err "${script_name}: Failed to retrieve LV size. Exiting"
@@ -59,7 +58,7 @@ function get_vg_name() { # 1:lv_path
     #
     local vg_name
 
-    if vg_name=$(lvs --noheadings -o vg_name "$1"); then
+    if vg_name=$(lvs --noheadings -o vg_name "$1" | tr -d ' '); then
         logger -p user.debug "${script_name}: vg_name: ${vg_name}."
         printf "%s" "${vg_name}"
     else
@@ -92,9 +91,9 @@ logger -p user.info "${script_name}: LVs associated with VM: ${list_paths[*]}."
 declare -A lv_sizes
 for lv_path in "${list_paths[@]}"; do
     size=$(get_lv_size "${lv_path}")
-    logger -p user.debug "${script_name}: ${lv_path} size: ${size}."
+    logger -p user.debug "${script_name}: ${lv_path} size: ${size}G."
     lv_sizes["${lv_path}"]="${size}"
-    logger -p user.info "${script_name}: Added [\'${lv_path}\': ${size}] to hash."
+    logger -p user.info "${script_name}: Added ['${lv_path}': ${size}] to hash."
 done
 
 # Create snapshot for each LV & populate a list with results.
@@ -106,30 +105,31 @@ for lv_path in ${!lv_sizes[@]}; do
     logger -p user.info "${script_name}: Obtaining VG name."
     vg_name=$(get_vg_name "${lv_path}")
 
-    snap_name="${lv_path#\/dev\/${vg_name}\/}.snap"
+    int_snap_name=$(printf "%s" "${lv_path}" | sed 's/.*\///')
+    snap_name="${int_snap_name}.snap"
     logger -p user.info "${script_name}: Creating snapshot of ${lv_path} named ${snap_name}."
-    lvcreate -L"${lv_sizes[${lv_path}]}" -s -n "${snap_name}" "${lv_path}"
+    lvcreate -L"${lv_sizes[${lv_path}]}G" -s -n "${snap_name}" "${lv_path}"
     snapshots+=( "${snap_name}" )
 done
 
 # Use dd to copy snapshot to target filesystem.
 for snap in "${snapshots[@]}"; do
-    logger -p user.notice "${script_name}: Copying ${snap} to ${backup_target}/${snap}.$(date +%Y-%m-%d-%H%M).img"
+    logger -p user.notice "${script_name}: Copying /dev/${vg_name}/${snap} to ${backup_target}/${snap}.$(date +%Y-%m-%d-%H%M).img"
 
-    #if dd if="${snap}" of="${backup_target}/${snap}.$(date +%Y-%m-%d-%H%M).img"; then
-    #    logger -p user.debug "${script_name}: Copy succeeded."
-    #else
-    #    logger -p user.err "${script_name}: Copy failed."
-    #fi
+    if dd if="/dev/${vg_name}/${snap}" of="${backup_target}/${snap}.$(date +%Y-%m-%d-%H%M).img"; then
+        logger -p user.info "${script_name}: Copy succeeded."
+    else
+        logger -p user.err "${script_name}: Copy failed."
+    fi
 done
 
 # Delete snapshots.
 for snap in "${snapshots[@]}"; do
     logger -p user.notice "${script_name}: Removing snapshot ${snap}."
 
-    #if lvremove "${snap}"; then
-    #    logger -p user.debug "${script_name}: ${snap} removed."
-    #else
-    #    logger -p user.warn "${script_name}: Removal of ${snap} failed."
-    #fi
+    if lvremove -f "/dev/${vg_name}/${snap}"; then
+        logger -p user.notice "${script_name}: /dev/${vg_name}/${snap} removed."
+    else
+        logger -p user.warn "${script_name}: Removal of /dev/${vg_name}/${snap} failed."
+    fi
 done
