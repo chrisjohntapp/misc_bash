@@ -81,10 +81,7 @@ script_name=$(basename "$0")
 vm_name="$1"
 
 # Populate list with absolute paths of all lvs associated with vm_name.
-string_paths=$(virsh domblklist --details "${vm_name}" | grep -Ev "cdrom" | sed '1,2d' | sed '$,1d' | awk '{print $4}')
-logger -p user.debug "${script_name}: string_paths: ${string_paths}."
-
-list_paths=( "${string_paths}" )
+mapfile -t list_paths < <(virsh domblklist --details "${vm_name}" | grep -Ev file | sed '1,2d' | sed '$,1d' | awk '{print $4}')
 logger -p user.info "${script_name}: LVs associated with VM: ${list_paths[*]}."
 
 # Create hash of lv paths + sizes in GB.
