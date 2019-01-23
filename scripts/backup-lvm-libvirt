@@ -36,26 +36,6 @@ ${backup_target}"
     fi
 }
 
-function get_lv_paths() { # 1:vm_name
-    #
-    # Creates array of lv absolute paths associated with vm_name (except
-    # devices listed in exclusions).
-    # (Initially returned an array, but was too difficult to do properly).
-    #
-    # TODO: set exclusions via optional argument.
-    #
-    local exclusions string_paths
-    exclusions='cdrom'
-
-    string_paths=$(virsh domblklist --details "$1" | grep -Ev \
-    "${exclusions}" | sed '1,2d' | sed '$,1d' | awk '{print $4}')
-    logger -p user.debug "${script_name}: string_paths: ${string_paths}."
-
-    array_paths=( "${string_paths}" )
-    logger -p user.info "${script_name}: LVs associated with VM: \
-${array_paths[*]}."
-}
-
 function get_lv_size() { # 1:lv_path
     #
     # Return the size in GB of lv_path.
@@ -77,11 +57,11 @@ function get_vg_name() { # 1:lv_path
     #
     # Return the name of vg from lv_path.
     #
-    local name
+    local vg_name
 
-    if name="$(lvs --noheadings -o vg_name $1)"; then
-        logger -p user.debug "${script_name}: vg_name: ${name}."
-        printf "%s" "${name}"
+    if vg_name=$(lvs --noheadings -o vg_name "$1"); then
+        logger -p user.debug "${script_name}: vg_name: ${vg_name}."
+        printf "%s" "${vg_name}"
     else
         logger -p user.err "${script_name}: Could not obtain VG name. Exiting."
         exit 1
@@ -93,38 +73,42 @@ function get_vg_name() { # 1:lv_path
 #
 
 # Validate.
-
 [[ -d "${backup_target}" ]] || { printf "%s does not exist or is not a \
 directory" "${backup_target}"; exit 1; }
 
-script_name="$(basename $0)"
+script_name=$(basename "$0")
 [[ $# = 1 ]] || { printf "%s vm_name" "${script_name}"; exit 1; }
 
-# Populate array_paths with absolute paths of all lvs associated with vm_name.
-get_lv_paths "$1"
+vm_name="$1"
+
+# Populate list with absolute paths of all lvs associated with vm_name.
+string_paths=$(virsh domblklist --details "${vm_name}" | grep -Ev "cdrom" | sed '1,2d' | sed '$,1d' | awk '{print $4}')
+logger -p user.debug "${script_name}: string_paths: ${string_paths}."
+
+list_paths=( "${string_paths}" )
+logger -p user.info "${script_name}: LVs associated with VM: ${list_paths[*]}."
 
 # Create hash of lv paths + sizes in GB.
 declare -A lv_sizes
-for path in "${array_paths[@]}"; do
-    size=$(get_lv_size "${path}")
-    logger -p user.debug "${script_name}: ${path} size: ${size}."
-    lv_sizes["${path}"]="${size}"
-    logger -p user.info "${script_name}: Added \[${path}: ${size}\] to hash."
+for lv_path in "${list_paths[@]}"; do
+    size=$(get_lv_size "${lv_path}")
+    logger -p user.debug "${script_name}: ${lv_path} size: ${size}."
+    lv_sizes["${lv_path}"]="${size}"
+    logger -p user.info "${script_name}: Added \[${lv_path}: ${size}\] to hash."
 done
 
-# Create snapshot for each LV.
+# Create snapshot for each LV & populate a list with results.
 snapshots=()
-for lv in ${!lv_sizes[@]}; do
+for lv_path in ${!lv_sizes[@]}; do
     logger -p user.info "${script_name}: Checking if space is available."
-    check_space_available "${lv_sizes[${lv}]}" 
+    check_space_available "${lv_sizes[${lv_path}]}" 
 
     logger -p user.info "${script_name}: Obtaining VG name."
-    vg_name=$(get_vg_name ${lv})
+    vg_name=$(get_vg_name "${lv_path}")
 
-    logger -p user.info "${script_name}: Creating LV snapshot."
-    lvcreate -L"${lv_sizes[${lv}]}" -s -n "${path#\/dev\/${vg_name}\/}.snap" \
-    "${lv}"
-    snapshots+=("${path#\/dev\/${vg_name}\/}.snap")
+    logger -p user.info "${script_name}: Creating snapshot of ${lv_path}."
+    lvcreate -L"${lv_sizes[${lv_path}]}" -s -n "${lv_path#\/dev\/${vg_name}\/}.snap" "${lv_path}"
+    snapshots+=("${lv_path#\/dev\/${vg_name}\/}.snap")
 done
 
 # Use dd to copy snapshot to target filesystem.
