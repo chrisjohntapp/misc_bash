@@ -94,7 +94,7 @@ for lv_path in "${list_paths[@]}"; do
     size=$(get_lv_size "${lv_path}")
     logger -p user.debug "${script_name}: ${lv_path} size: ${size}."
     lv_sizes["${lv_path}"]="${size}"
-    logger -p user.info "${script_name}: Added \[${lv_path}: ${size}\] to hash."
+    logger -p user.info "${script_name}: Added [\'${lv_path}\': ${size}] to hash."
 done
 
 # Create snapshot for each LV & populate a list with results.
@@ -106,9 +106,10 @@ for lv_path in ${!lv_sizes[@]}; do
     logger -p user.info "${script_name}: Obtaining VG name."
     vg_name=$(get_vg_name "${lv_path}")
 
-    logger -p user.info "${script_name}: Creating snapshot of ${lv_path}."
-    lvcreate -L"${lv_sizes[${lv_path}]}" -s -n "${lv_path#\/dev\/${vg_name}\/}.snap" "${lv_path}"
-    snapshots+=("${lv_path#\/dev\/${vg_name}\/}.snap")
+    snap_name="${lv_path#\/dev\/${vg_name}\/}.snap"
+    logger -p user.info "${script_name}: Creating snapshot of ${lv_path} named ${snap_name}."
+    lvcreate -L"${lv_sizes[${lv_path}]}" -s -n "${snap_name}" "${lv_path}"
+    snapshots+=( "${snap_name}" )
 done
 
 # Use dd to copy snapshot to target filesystem.
