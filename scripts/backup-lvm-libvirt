@@ -98,7 +98,7 @@ done
 
 # Create snapshot for each LV & populate a list with results.
 snapshots=()
-for lv_path in ${!lv_sizes[@]}; do
+for lv_path in "${!lv_sizes[@]}"; do
     logger -p user.info "${script_name}: Checking if space is available."
     check_space_available "${lv_sizes[${lv_path}]}" 
 
