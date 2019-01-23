@@ -1,21 +1,27 @@
 #!/bin/bash
 
-#
-# Backup Libvirt guests using LVM snapshots.
-#
+# ==============================================================================
+# Back up Libvirt guests using LVM snapshots.
+# ==============================================================================
+# Will detect if multiple LVs are attached and back up all of them.
+# Set backup_target below, and provide a single VM name as an argument.
+# Will test for sufficient space on target before backing up.
+# ==============================================================================
 
-#
+
+# ======================================
 # Settings.
-#
+# ======================================
 
 backup_target="/green/backup"
 
-#
+
+# ======================================
 # Functions.
-#
+# ======================================
 
 function check_space_available() { # 1:lv_size
-    #
+    # ==================================================
     # Returns code 0 if space is available, or 1 if not.
     #
     local target_space_available
@@ -37,7 +43,7 @@ ${backup_target}"
 }
 
 function get_lv_size() { # 1:lv_path
-    #
+    # =================================
     # Return the size in GB of lv_path.
     #
     local size
@@ -53,7 +59,7 @@ function get_lv_size() { # 1:lv_path
 }
 
 function get_vg_name() { # 1:lv_path
-    #
+    # ===================================
     # Return the name of vg from lv_path.
     #
     local vg_name
@@ -67,11 +73,14 @@ function get_vg_name() { # 1:lv_path
     fi
 }
 
-#
-# Main.
-#
 
+# ======================================
+# Main.                               
+# ======================================
+
+# =========
 # Validate.
+#
 [[ -d "${backup_target}" ]] || { printf "%s does not exist or is not a \
 directory" "${backup_target}"; exit 1; }
 
@@ -80,20 +89,27 @@ script_name=$(basename "$0")
 
 vm_name="$1"
 
+# =====================================================================
 # Populate list with absolute paths of all lvs associated with vm_name.
+#
 mapfile -t list_paths < <(virsh domblklist --details "${vm_name}" | grep -Ev file | sed '1,2d' | sed '$,1d' | awk '{print $4}')
 logger -p user.info "${script_name}: LVs associated with VM: ${list_paths[*]}."
 
+# ======================================
 # Create hash of lv paths + sizes in GB.
+#
 declare -A lv_sizes
 for lv_path in "${list_paths[@]}"; do
     size=$(get_lv_size "${lv_path}")
     logger -p user.debug "${script_name}: ${lv_path} size: ${size}G."
+
     lv_sizes["${lv_path}"]="${size}"
     logger -p user.info "${script_name}: Added ['${lv_path}': ${size}] to hash."
 done
 
+# ===========================================================
 # Create snapshot for each LV & populate a list with results.
+#
 snapshots=()
 for lv_path in "${!lv_sizes[@]}"; do
     logger -p user.info "${script_name}: Checking if space is available."
@@ -104,12 +120,16 @@ for lv_path in "${!lv_sizes[@]}"; do
 
     int_snap_name=$(printf "%s" "${lv_path}" | sed 's/.*\///')
     snap_name="${int_snap_name}.snap"
+
     logger -p user.info "${script_name}: Creating snapshot of ${lv_path} named ${snap_name}."
     lvcreate -L"${lv_sizes[${lv_path}]}G" -s -n "${snap_name}" "${lv_path}"
+
     snapshots+=( "${snap_name}" )
 done
 
+# =============================================
 # Use dd to copy snapshot to target filesystem.
+# 
 for snap in "${snapshots[@]}"; do
     logger -p user.notice "${script_name}: Copying /dev/${vg_name}/${snap} to ${backup_target}/${snap}.$(date +%Y-%m-%d-%H%M).img"
 
@@ -120,7 +140,9 @@ for snap in "${snapshots[@]}"; do
     fi
 done
 
+# =================
 # Delete snapshots.
+#
 for snap in "${snapshots[@]}"; do
     logger -p user.notice "${script_name}: Removing snapshot ${snap}."
 
