@@ -72,3 +72,26 @@ function ssh_loop() {
         sleep ${sleep}
     done
 }
+
+function init_keychain() {
+    #########################################################################
+    # Adds either all ssh keys in ~/.ssh or a specific key to ssh-agent. If
+    # ssh-agent is already running it will reuse that process.
+    # Keys should be named using a short alias ie 'lhq' rather than
+    # 'id_rsa_lhq'.
+    #########################################################################
+    local func=$(basename "${FUNCNAME[0]}")
+
+    if [[ $# -ne 1 ]]; then
+        printf "Usage: %s [ key alias || 'all' ]\n" "${func}"
+        return 1
+    fi
+
+    all_keys=$(find ~/.ssh/ -type f -name 'id_*' -not -name 'id_*.pub')
+
+    if [[ "$1" == 'all' ]]; then
+        eval $(keychain --nogui --eval --agents ssh ${all_keys})
+    else
+        eval $(keychain --nogui --eval --agents ssh id_rsa_"${1}")
+    fi
+}
