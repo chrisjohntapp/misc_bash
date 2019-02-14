@@ -50,7 +50,7 @@ function tip() {
     # =========================================================================
     local func=$(basename "${FUNCNAME[0]}")
 
-    local -r tips_path='Dropbox/CLI_Tips'
+    local -r tips_path='Repos/Coal_Creek/CLI_Tips'
 
     if [[ $# -gt 1 ]] && [[ -r "${HOME}/${tips_path}/${1}.txt" ]]; then
 	local subject=$1; shift
@@ -79,7 +79,7 @@ function tip_edit() {
     # =========================================================
     local func=$(basename "${FUNCNAME[0]}")
 
-    local -r tips_path='Dropbox/CLI_Tips'
+    local -r tips_path='Repos/Coal_Creek/CLI_Tips'
     if [[ $# -eq 1 ]]; then
 	local tip_file="${HOME}/${tips_path}/${1}.txt"
 	if [[ -w "${tip_file}" ]]; then
