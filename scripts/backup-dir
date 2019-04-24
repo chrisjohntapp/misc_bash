@@ -17,6 +17,7 @@ local_user=${custom_local_user:-$(id -un)}
 remote_user=${custom_remote_user:-$(id -un)}
 
 # A different way of setting a 'default with override' variable.
+# Not exactly the same -- look into it.
 : ${port:=22}
 
 usage() {
@@ -32,7 +33,7 @@ else
   usage
 fi
 
-# Capturing the output -- with '$(command)' -- in addition to the return code --with a bare 'commmand' --  can be useful.
+# Capture resulting string rather than return code.
 ping_result=$(pingable ${backup_server})
 if [[ $? = 0 ]] && [[ -z "${ping_result}" ]]; then
   rsync_result=$(rsync --delete -e "ssh -p ${port}" -a /home/${local_user}/"${source_dir}" ${remote_user}@${backup_server}:/backups/funnel)

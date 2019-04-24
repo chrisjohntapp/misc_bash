@@ -99,7 +99,7 @@ service ntpd start
 echo "# User specific aliases and functions
 source ~/.bash-git-prompt/gitprompt.sh
 
-for i in ~/Repos/laputa/misc_bash/libs/*; do
+for i in ~/Repos/Coal_Creek/misc_bash/libs/*; do
   . $i
 done
 
