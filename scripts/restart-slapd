@@ -1,0 +1,92 @@
+#!/bin/bash
+
+# Restart slapd, checking it's actually responding to queries.
+# Should be owned by root; perms 0700.
+
+passwd='XXXXX'
+
+
+function is_slapd_running() {
+    logger -p user.info "Checking if slapd is running."
+    if /usr/bin/ldapsearch -b dc=nix,dc=coalcreek,dc=lan -H ldapi:/// -D cn=admin,dc=nix,dc=coalcreek,dc=lan -w ${passwd} >/dev/null; then
+        logger -p user.info "Yes it is."
+        return 0
+    else
+        logger -p user.info "No it isn't."
+        return 1
+    fi
+}
+
+
+function stop_slapd() {
+    local time=2
+    local slapid
+
+    if slapid=$(</run/slapd/slapd.pid); then
+        logger -p user.info "Found slapd running with pid ${slapid}."
+    else
+        logger -p user.info "Could not find slapd pid."
+        return 0
+    fi
+
+    logger -p user.info "Trying to stop slapd via init script."
+    for i in {1..5}; do
+        logger -p user.info "Attempt $i."
+
+        if is_slapd_running
+        then
+            /etc/init.d/slapd stop
+            sleep ${time}
+        else
+            logger -p user.notice "Slapd stopped via init script."
+            return 0
+        fi
+        (( time=time*2 ))
+    done
+
+    logger -p user.info "Trying to stop slapd nicely with TERM."
+    if is_slapd_running; then
+        kill -15 ${slapid}
+    else
+        return 0
+    fi
+    sleep 2
+
+    logger -p user.info "Trying to stop slapd harshly with QUIT."
+    if is_slapd_running; then
+        kill -3 ${slapid}
+    else
+        return 0
+    fi
+    sleep 2
+
+    logger -p user.notice "Stopping slapd with KILL."
+    if is_slapd_running; then
+        kill -9 ${slapid}
+    else
+        return 0
+    fi
+
+    if is_slapd_running; then
+        logger -p user.err "Could not stop slapd by any means."
+        return 1
+    fi
+}
+
+
+function start_slapd() {
+    local time=3
+
+    logger -p user.info "Trying to start slapd via init script."
+    until is_slapd_running; do
+        /etc/init.d/slapd start
+        sleep ${time}
+        (( time=time*2 ))
+    done
+}
+
+
+stop_slapd || logger -p user.err 'Failed to stop slapd.'
+sleep 3
+start_slapd || logger -p user.err 'Failed to start slapd.'
+
