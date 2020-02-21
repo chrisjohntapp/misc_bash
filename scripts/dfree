@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# Required for Samba to report correct disk usage of ZFS volumes.
+
+CUR_PATH=$(pwd)
+ZFS_CHECK_OUTPUT=$(zfs get type $CUR_PATH 2>&1 > /dev/null) > /dev/null
+
+if [[ $ZFS_CHECK_OUTPUT == *not\ a\ ZFS* ]]; then
+    IS_ZFS=false
+else
+    IS_ZFS=true
+fi
+
+if [[ $IS_ZFS = false ]]; then
+    df $CUR_PATH | tail -1 | awk '{print $2" "$4}'
+else
+    USED=$((`zfs get -o value -Hp used $CUR_PATH` / 1024)) > /dev/null
+    AVAIL=$((`zfs get -o value -Hp available $CUR_PATH` / 1024)) > /dev/null
+
+    TOTAL=$(($USED+$AVAIL)) > /dev/null
+
+    echo $TOTAL $AVAIL
+fi
