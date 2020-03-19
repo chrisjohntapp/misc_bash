@@ -52,15 +52,15 @@ function tip() {
 
     local -r tips_path='Repos/Coal_Creek/CLI_Tips'
 
-    if [[ $# -gt 1 ]] && [[ -r "${HOME}/${tips_path}/${1}.txt" ]]; then
+    if [[ $# -gt 1 ]] && [[ -r "${HOME}/${tips_path}/${1}.md" ]]; then
 	local subject=$1; shift
-	printf "%s\n" "$*" >> "${HOME}/${tips_path}/${subject}.txt"
+	printf "%s\n" "$*" >> "${HOME}/${tips_path}/${subject}.md"
 
     elif [[ $# -eq 1 ]]; then
 	if [[ "$1" = '-l' ]]; then
 	    ls "${HOME}/${tips_path}"
 	else
-	    local -r tip_file="${HOME}/${tips_path}/${1}.txt"
+	    local -r tip_file="${HOME}/${tips_path}/${1}.md"
 	    if [[ -r "${tip_file}" ]]; then
 		cat "${tip_file}"
 	    else
@@ -73,6 +73,21 @@ function tip() {
     fi
 }
 
+function question_create_file() {
+    # =========================================================
+    # Creates tip file, after prompt.
+    # =========================================================
+    local func=$(basename "${FUNCNAME[0]}")
+    
+    local -r tips_path='Repos/Coal_Creek/CLI_Tips'
+
+    read -rep 'Would you like to create it? (y/n)\n' response
+
+    if [[ "${response}" == 'y' ]]; then
+        touch "${HOME}/${tips_path}/${1}.md"
+    fi
+}
+
 function tip_edit() {
     # =========================================================
     # Opens the named file within the tips library for editing.
@@ -81,11 +96,12 @@ function tip_edit() {
 
     local -r tips_path='Repos/Coal_Creek/CLI_Tips'
     if [[ $# -eq 1 ]]; then
-	local tip_file="${HOME}/${tips_path}/${1}.txt"
+	local tip_file="${HOME}/${tips_path}/${1}.md"
 	if [[ -w "${tip_file}" ]]; then
 	    vim "${tip_file}"
 	else
 	    printf "No tip file exists for %s.\n" "$1"
+            question_create_file "$1"
 	fi
     else
 	printf "Usage: %s subject\n" "${func}"

@@ -30,3 +30,13 @@ function git_pull_all() {
 
     done < <(find "${PWD}" -mindepth 1 -maxdepth 1 -type d -print0)
 }
+
+function git_user_set() {
+    #########################################################################
+    # Sets user/email info on a repo to me.
+    #########################################################################
+    local func=$(basename "${FUNCNAME[0]}")
+
+    git config user.name "Christopher J Tapp"
+    git config user.email chrisjohntapp@gmail.com
+}
