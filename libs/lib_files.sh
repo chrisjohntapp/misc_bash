@@ -81,7 +81,7 @@ function question_create_file() {
     
     local -r tips_path='Repos/Coal_Creek/CLI_Tips'
 
-    read -rep 'Would you like to create it? (y/n)\n' response
+    read -rep 'Would you like to create it? (y/n) ' response
 
     if [[ "${response}" == 'y' ]]; then
         touch "${HOME}/${tips_path}/${1}.md"
