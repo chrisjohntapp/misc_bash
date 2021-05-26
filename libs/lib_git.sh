@@ -40,3 +40,13 @@ function git_user_set() {
     git config user.name "Christopher J Tapp"
     git config user.email chrisjohntapp@gmail.com
 }
+
+function git_user_set_splunk() {
+    #########################################################################
+    # Sets user/email info on a repo to my splunk user.
+    #########################################################################
+    local func=$(basename "${FUNCNAME[0]}")
+
+    git config user.name "Chris Tapp"
+    git config user.email ctapp@splunk.com
+}
