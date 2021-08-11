@@ -167,10 +167,23 @@ function yml_to_yaml() {
 
     old_ext=${1:-yml}
     new_ext=${2:-yaml}
-    
+
     while read -r -d ''; do
         file=${REPLY%.${old_ext}}
         mv "${REPLY}" "${file}.${new_ext}"
     done < <(find ${PWD} -type f -name "*.${old_ext}" -print0)
+}
+
+function dsremove() {
+    # =========================================================
+    # Remove all .DS_Store dirs under $PWD.
+    # =========================================================
+    local func=$(basename "${FUNCNAME[0]}")
+
+    [[ $# -eq 1 ]] || { printf "Usage: %s dir\n"; return 1; }
+
+    local target="$1"
+
+    find ${target} -type f -name .DS_Store -exec rm {} \;
 }
 
