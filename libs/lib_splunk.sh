@@ -25,14 +25,14 @@ create_stack() {
     sleep 5
 
     result=$(cloudctl stacks proposals list ${1})
+    local proposalid
     readarray -t aresult <<< "${result}"
     for i in "${aresult[@]}"; do
-        if [[ ${i} =~ "id: " ]]; then
-	    proposalid=${i:3}
-	    sleep 2
+        if [[ ${i} =~ "id:" ]]; then
+	    proposalid=${i#*  id: }
 	fi
     done
 
     sleep 5
-    cloudctl stacks proposals approve ${1} ${proposalid}
+    cloudctl stacks proposals approve ${1} "${proposalid}" -r "${2}"
 }
